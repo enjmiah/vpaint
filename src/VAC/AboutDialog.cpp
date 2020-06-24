@@ -55,7 +55,7 @@ void PushLineEdit::keyPressEvent(QKeyEvent *event)
 AboutDialog::AboutDialog(bool showAtStartup)
 {
     QString aboutText = tr(
-            "Version: %1<br><br>"
+            "Version: %1-dgp<br><br>"
             " "
             "<a href=\"https://www.vpaint.org\" style=\"text-decoration: none;\">https://www.vpaint.org</a><br>"
             "<a href=\"https://www.vgc.io\" style=\"text-decoration: none;\">https://www.vgc.io</a><br><br>"

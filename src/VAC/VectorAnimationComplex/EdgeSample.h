@@ -38,11 +38,15 @@ public:
     inline double width() const { return d_[2]; }
     inline void setWidth(double newWidth) { d_[2] = newWidth; }
 
-    // Constructor
-    EdgeSample(double x = 0, double y = 0, double w = 0): d_(x, y, w) {}
-    EdgeSample(const Eigen::Vector3d & d): d_(d) {}
+    // Access drawing time
+    inline double time() const { return d_[3]; }
+    inline void setTime(double newTime) { d_[3] = newTime; }
 
-    // Translate (keep width untouched)
+    // Constructor
+    EdgeSample(double x = 0, double y = 0, double w = 0, double t = 0): d_(x, y, w, t) {}
+    EdgeSample(const Eigen::Vector4d & d): d_(d) {}
+
+    // Translate (keep width and time untouched)
     inline void translate(double x, double y) { d_[0] += x; d_[1] += y; }
     inline void translate(const Eigen::Vector2d& p) {d_[0] += p[0]; d_[1] += p[1]; }
 
@@ -86,8 +90,8 @@ public:
     EIGEN_MAKE_ALIGNED_OPERATOR_NEW
 
 private:
-    // 2D position + width
-    Eigen::Vector3d d_;
+    // 2D position + width + time
+    Eigen::Vector4d d_;
 };
 
 }

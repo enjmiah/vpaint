@@ -207,7 +207,7 @@ public:
 
     LinearSpline(QTextStream & in);
     //LinearSpline(XmlStreamReader & xml);
-    LinearSpline(const QStringRef & str); // str = curve data from XML, without the type
+    LinearSpline(const QStringRef & str, const QStringRef & subtype); // str = curve data from XML, without the type
     QString stringType() const {return "LinearSpline";}
 
     SculptCurve::Curve<EdgeSample> & curve();

@@ -60,6 +60,8 @@
 #include <QColorDialog>
 #include <QInputDialog>
 
+#include <chrono>
+
 #define MYDEBUG 0
 
 namespace VectorAnimationComplex
@@ -71,6 +73,12 @@ namespace
 {
 
 const double PI = 3.14159;
+
+double now() {
+  return std::chrono::duration<double>(
+           std::chrono::system_clock::now().time_since_epoch())
+    .count();
+}
 
 bool isCycleContainedInFace(const Cycle & cycle, const PreviewKeyFace & face)
 {
@@ -1658,7 +1666,7 @@ void VAC::beginSketchEdge(double x, double y, double w, Time time)
 {
     timeInteractivity_ = time;
     sketchedEdge_ = new LinearSpline(ds_);
-    sketchedEdge_->beginSketch(EdgeSample(x,y,w));
+    sketchedEdge_->beginSketch(EdgeSample(x,y,w,now()));
     hoveredFaceOnMousePress_ = 0;
     hoveredFaceOnMouseRelease_ = 0;
     hoveredFacesOnMouseMove_.clear();
@@ -1675,7 +1683,7 @@ void VAC::continueSketchEdge(double x, double y, double w)
 {
     if(sketchedEdge_)
     {
-        sketchedEdge_->continueSketch(EdgeSample(x,y,w));
+        sketchedEdge_->continueSketch(EdgeSample(x,y,w,now()));
         if(hoveredCell_)
         {
             InbetweenFace * sface = hoveredCell_->toInbetweenFace();
@@ -1737,7 +1745,7 @@ void VAC::beginCutFace(double x, double y, double w, KeyVertex * startVertex)
             w = 3.0;
 
         sketchedEdge_ = new LinearSpline(ds_);
-        sketchedEdge_->beginSketch(EdgeSample(x,y,w));
+        sketchedEdge_->beginSketch(EdgeSample(x,y,w,now()));
 
         //emit changed();
     }
@@ -1752,7 +1760,7 @@ void VAC::continueCutFace(double x, double y, double w)
         if(invisibleCut)
             w = 3.0;
 
-        sketchedEdge_->continueSketch(EdgeSample(x,y,w));
+        sketchedEdge_->continueSketch(EdgeSample(x,y,w,now()));
         //emit changed();
     }
 }

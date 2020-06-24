@@ -79,8 +79,8 @@ EdgeGeometry * EdgeGeometry::clone()
      QStringRef curveData = str.mid(i+1, str.length()-i-2);
 
      // Switch on type
-     if(curveType == "xywdense")
-         return new LinearSpline(curveData);
+     if(curveType == "xywdense" || curveType == "xywtdense")
+         return new LinearSpline(curveData, curveType);
      else
          return 0;
  }
@@ -690,7 +690,9 @@ LinearSpline::LinearSpline(QTextStream & in) //:
         in >> nuple;
         QStringList list = nuple.split(QRegExp("\\s*[\\(\\,\\)]\\s*"),
                                  QString::SkipEmptyParts);
-        vertices << EdgeSample(list[0].toDouble(), list[1].toDouble(), list[2].toDouble());
+        assert(list.size() >= 4);
+        vertices << EdgeSample(list[0].toDouble(), list[1].toDouble(), list[2].toDouble(),
+                               list[3].toDouble());
     }
     in >> bracket;
     curve_.setVertices(vertices);
@@ -701,8 +703,10 @@ void LinearSpline::save_(QTextStream & out)
 {
     out << Save::newField("NumVertices") << curve_.size();
     out << Save::newField("Vertices") << "[ ";
-    for(int i=0; i<curve_.size(); ++i)
-        out << "(" << curve_[i].x() << "," << curve_[i].y() << "," << curve_[i].width() << ") ";
+    for (int i = 0; i < curve_.size(); ++i) {
+        out << "(" << curve_[i].x() << "," << curve_[i].y() << "," << curve_[i].width()
+            << "," << curve_[i].time() << ") ";
+    }
     out << "]";
 }
 
@@ -719,7 +723,7 @@ QString double2qstring(double x)
 }
 }
 
-LinearSpline::LinearSpline(const QStringRef & str)
+LinearSpline::LinearSpline(const QStringRef & str, const QStringRef & subtype)
 {
     // Clear curve
     curve_.clear();
@@ -737,9 +741,13 @@ LinearSpline::LinearSpline(const QStringRef & str)
 
     // Get vertices from data
     std::vector<EdgeSample,Eigen::aligned_allocator<EdgeSample> > vertices;
-    int n = (d.size()-1)/3;
-    for(int i=0; i<n; i++)
-        vertices << EdgeSample(d[3*i+1], d[3*i+2], d[3*i+3]);
+    const auto num_components = (subtype == "xywtdense" ? 4 : 3);
+    int n = (d.size() - 1) / num_components;
+    for (int i = 0; i < n; i++) {
+        vertices << EdgeSample(d[num_components * i + 1], d[num_components * i + 2],
+                               d[num_components * i + 3],
+                               (num_components == 4 ? d[num_components * i + 4] : 0.0));
+    }
 
     // Set curve
     curve_.setDs(d[0]);
@@ -787,12 +795,13 @@ void LinearSpline::write(XmlStreamWriter & xml) const
     {
         d += double2qstring(curve_[i].x()) + "," +
              double2qstring(curve_[i].y()) + "," +
-             double2qstring(curve_[i].width());
+             double2qstring(curve_[i].width()) + "," +
+             double2qstring(curve_[i].time());
 
         if(i<n-1) d += " ";
     }
 
-    xml.writeAttribute("curve", "xywdense(" + d + ")");
+    xml.writeAttribute("curve", "xywtdense(" + d + ")");
 }
 
 
