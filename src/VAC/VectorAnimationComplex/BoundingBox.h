@@ -17,6 +17,8 @@
 #ifndef BOUNDINGBOX_H
 #define BOUNDINGBOX_H
 
+#include <Eigen/Dense>
+
 /// \class BoundingBox
 /// A bounding box represents an axis-aligned rectangle, possibly
 /// empty, possibly degenerate (=zero area), possibly infinite.
@@ -251,6 +253,10 @@ public:
 
     // Returns whether the two bounding boxes intersect
     bool intersects(const BoundingBox & other) const;
+
+    bool contains(const Eigen::Vector2d & p) const {
+      return p.x() >= xMin_ && p.x() <= xMax_ && p.y() >= yMin_ && p.y() <= yMax_;
+    }
     
     // Comparison operators
     bool operator==(const BoundingBox & other) const;
