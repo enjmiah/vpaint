@@ -383,6 +383,18 @@ LinearSpline::LinearSpline(const std::vector<EdgeSample,Eigen::aligned_allocator
     curve_.resample();
 }
 
+LinearSpline::LinearSpline(const std::vector<EdgeSample,Eigen::aligned_allocator<EdgeSample> > & samples, const Options::Flags opt)
+{
+    curve_.setVertices(samples);
+    if(opt & Options::Loop)
+    {
+        isClosed_ = true;
+        curve_.makeLoop();
+    }
+    if(opt & Options::Resample)
+        curve_.resample();
+}
+
 LinearSpline::LinearSpline(const QList<EdgeSample> & samples, bool loop)
 {
     std::vector<EdgeSample,Eigen::aligned_allocator<EdgeSample> > stdvector;
@@ -814,6 +826,11 @@ void LinearSpline::continueSketch(const EdgeSample & sample) { curve_.continueSk
 void LinearSpline::endSketch() { curve_.endSketch(); }
 
 SculptCurve::Curve<EdgeSample> & LinearSpline::curve()
+{
+    return curve_;
+}
+
+const SculptCurve::Curve<EdgeSample> & LinearSpline::curve() const
 {
     return curve_;
 }

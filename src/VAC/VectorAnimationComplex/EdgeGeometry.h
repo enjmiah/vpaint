@@ -147,9 +147,18 @@ private:
 class LinearSpline: public EdgeGeometry
 {
 public:
+    struct Options {
+        enum Flags {
+            None = 0,
+            Loop = 1 << 0,
+            Resample = 1 << 1,
+        };
+    };
+
     LinearSpline(double ds = 5.0);
     LinearSpline(const QList<EdgeSample> & samples, bool loop = false);
     LinearSpline(const std::vector<EdgeSample,Eigen::aligned_allocator<EdgeSample> > & samples, bool loop = false);
+    LinearSpline(const std::vector<EdgeSample,Eigen::aligned_allocator<EdgeSample> > & samples, Options::Flags);
     LinearSpline(const SculptCurve::Curve<EdgeSample> & other, bool loop = false);
     LinearSpline(EdgeGeometry & other); // non-const cause
                             // sampling computed
@@ -211,6 +220,7 @@ public:
     QString stringType() const {return "LinearSpline";}
 
     SculptCurve::Curve<EdgeSample> & curve();
+    const SculptCurve::Curve<EdgeSample> & curve() const;
 
     EIGEN_MAKE_ALIGNED_OPERATOR_NEW
 
