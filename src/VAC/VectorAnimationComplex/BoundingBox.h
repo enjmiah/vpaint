@@ -257,6 +257,16 @@ public:
     bool contains(const Eigen::Vector2d & p) const {
       return p.x() >= xMin_ && p.x() <= xMax_ && p.y() >= yMin_ && p.y() <= yMax_;
     }
+
+    double distanceTo(const Eigen::Vector2d & p) const {
+      return distanceTo(p.x(), p.y());
+    }
+
+    double distanceTo(const double x, const double y) const {
+      const auto dx = std::max(0.0, std::max(xMin_ - x, x - xMax_));
+      const auto dy = std::max(0.0, std::max(yMin_ - y, y - yMax_));
+      return std::sqrt(dx * dx + dy * dy);
+    }
     
     // Comparison operators
     bool operator==(const BoundingBox & other) const;
