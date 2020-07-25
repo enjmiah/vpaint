@@ -229,10 +229,10 @@ public:
     bool isProper()     const;
 
     // Get boundaries
-    inline const double & xMin() const { return xMin_; }
-    inline const double & xMax() const { return xMax_; }
-    inline const double & yMin() const { return yMin_; }
-    inline const double & yMax() const { return yMax_; }
+    double xMin() const { return xMin_; }
+    double xMax() const { return xMax_; }
+    double yMin() const { return yMin_; }
+    double yMax() const { return yMax_; }
             
     // Compute mid-points (0 if empty, or if min = -infinity and max = +infinity)
     double xMid()  const;
