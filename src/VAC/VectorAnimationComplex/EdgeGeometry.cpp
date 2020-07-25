@@ -141,7 +141,7 @@ void EdgeGeometry::triangulate(double /*width*/, Triangles & /*triangles*/)
 
 // --------------- Accessing Curve Geometry --------------------
 
-Eigen::Vector2d EdgeGeometry::pos2d(double s)
+Eigen::Vector2d EdgeGeometry::pos2d(double s) const
 {
     EdgeSample sample = pos(s);
     return Eigen::Vector2d(sample.x(),sample.y());

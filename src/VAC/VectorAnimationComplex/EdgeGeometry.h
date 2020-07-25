@@ -50,7 +50,7 @@ public:
     virtual void triangulate(double width, Triangles & triangles);
 
     // override these for your specific curve representation
-    Eigen::Vector2d pos2d(double s);
+    Eigen::Vector2d pos2d(double s) const;
     virtual EdgeSample pos(double s) const;
     virtual Eigen::Vector2d der(double s);
     virtual double length() const;

@@ -1108,7 +1108,8 @@ VertexCellList VAC::vertices()
     }
     return res;
 }
-KeyVertexList VAC::instantVertices()
+
+KeyVertexList VAC::instantVertices() const
 {
     KeyVertexList res;
     foreach(Cell * o, cells_)
@@ -1116,6 +1117,28 @@ KeyVertexList VAC::instantVertices()
         KeyVertex *node = o->toKeyVertex();
         if(node)
             res << node;
+    }
+    return res;
+}
+
+std::vector<KeyVertex*> VAC::instantVerticesVector() const {
+    std::vector<KeyVertex*> res;
+    foreach(Cell * o, cells_)
+    {
+        KeyVertex *node = o->toKeyVertex();
+        if(node)
+            res.push_back(node);
+    }
+    return res;
+}
+
+std::vector<const KeyVertex*> VAC::instantVerticesConstVector() const {
+    std::vector<const KeyVertex*> res;
+    foreach(Cell * o, cells_)
+    {
+        const KeyVertex *node = o->toKeyVertex();
+        if(node)
+            res.push_back(node);
     }
     return res;
 }
@@ -1157,7 +1180,7 @@ FaceCellList VAC::faces()
 }
 
 
-KeyEdgeList VAC::instantEdges()
+KeyEdgeList VAC::instantEdges() const
 {
     KeyEdgeList res;
     foreach(Cell * o, cells_)
@@ -1165,6 +1188,28 @@ KeyEdgeList VAC::instantEdges()
         KeyEdge * iedge = o->toKeyEdge();
         if(iedge)
             res << iedge;
+    }
+    return res;
+}
+
+std::vector<KeyEdge*> VAC::instantEdgesVector() const {
+    std::vector<KeyEdge*> res;
+    foreach(Cell * o, cells_)
+    {
+        KeyEdge * iedge = o->toKeyEdge();
+        if(iedge)
+            res.push_back(iedge);
+    }
+    return res;
+}
+
+std::vector<const KeyEdge*> VAC::instantEdgesConstVector() const {
+    std::vector<const KeyEdge*> res;
+    foreach(Cell * o, cells_)
+    {
+        const KeyEdge * iedge = o->toKeyEdge();
+        if(iedge)
+            res.push_back(iedge);
     }
     return res;
 }

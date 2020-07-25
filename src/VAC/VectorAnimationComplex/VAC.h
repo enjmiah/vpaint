@@ -19,7 +19,6 @@
 
 #include <QSet>
 #include <QMap>
-#include <QColor>
 
 #include "../SceneObject.h"
 
@@ -127,8 +126,12 @@ public:
     VertexCellList vertices();
     EdgeCellList edges();
     FaceCellList faces();
-    KeyEdgeList instantEdges();
-    KeyVertexList instantVertices();
+    KeyEdgeList instantEdges() const;
+    KeyVertexList instantVertices() const;
+    std::vector<KeyEdge*> instantEdgesVector() const;
+    std::vector<KeyVertex*> instantVerticesVector() const;
+    std::vector<const KeyEdge*> instantEdgesConstVector() const;
+    std::vector<const KeyVertex*> instantVerticesConstVector() const;
 
     // Get all cells of a given type existing at a given time
     CellSet cells(Time time);
