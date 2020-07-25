@@ -1,6 +1,5 @@
 project(VPaint)
 
-find_package(Qt5 COMPONENTS Widgets REQUIRED)
 set(CMAKE_AUTOMOC ON)
 set(CMAKE_AUTORCC ON)
 set(CMAKE_AUTOUIC ON)
@@ -23,5 +22,8 @@ target_compile_definitions(${PROJECT_NAME} PRIVATE _USE_MATH_DEFINES)
 target_compile_definitions(${PROJECT_NAME} PRIVATE APP_VERSION="${VPAINT_VERSION}")
 target_compile_definitions(${PROJECT_NAME} PRIVATE ACTION_MODIFIER_NAME="${ACTION_MODIFIER_NAME}")
 target_compile_definitions(${PROJECT_NAME} PRIVATE ACTION_MODIFIER_NAME_SHORT="${ACTION_MODIFIER_NAME_SHORT}")
+
+find_package(Qt5 COMPONENTS Gui Widgets REQUIRED)
+target_link_libraries(${PROJECT_NAME} PRIVATE Qt5::Gui Qt5::Widgets)
 
 target_link_libraries(${PROJECT_NAME} PRIVATE VAC)

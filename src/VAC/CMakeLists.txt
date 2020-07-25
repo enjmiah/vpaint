@@ -202,8 +202,8 @@ target_compile_definitions(${PROJECT_NAME} PRIVATE _USE_MATH_DEFINES)
 target_compile_definitions(${PROJECT_NAME} PRIVATE ACTION_MODIFIER_NAME="${ACTION_MODIFIER_NAME}")
 target_compile_definitions(${PROJECT_NAME} PRIVATE ACTION_MODIFIER_NAME_SHORT="${ACTION_MODIFIER_NAME_SHORT}")
 
-find_package(Qt5 COMPONENTS Core Gui Widgets OpenGL OpenGLExtensions Network REQUIRED)
-target_link_libraries(${PROJECT_NAME} PUBLIC Qt5::Widgets Qt5::Core Qt5::Gui Qt5::OpenGL Qt5::OpenGLExtensions Qt5::Network)
+find_package(Qt5 COMPONENTS Core OpenGL OpenGLExtensions Network REQUIRED)
+target_link_libraries(${PROJECT_NAME} PUBLIC Qt5::Core Qt5::OpenGL Qt5::OpenGLExtensions Qt5::Network)
 
 find_package(OpenGL REQUIRED)
 target_link_libraries(${PROJECT_NAME} PUBLIC ${OPENGL_LIBRARIES})
