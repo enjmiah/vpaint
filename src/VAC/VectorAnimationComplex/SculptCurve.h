@@ -117,7 +117,6 @@ public:
     {
         vertices_.push_back(start);
         vertices_.push_back(end);
-        resample(true);
     }
 
     // Reinitialize curve
@@ -166,10 +165,7 @@ public:
 
         if(sketchInProgress_)
         {
-
-
         // add input point
-        //Eigen::Vector2d p(x,y);
             double dx = vertex.x()-p_.back().p.x();
             double dy = vertex.y()-p_.back().p.y();
         double distSquared = dx*dx + dy*dy;
@@ -254,12 +250,7 @@ public:
 
         p_.clear(); // clear raw input (used as a test to know is curve is being drawn)
 
-
-
-
         sketchInProgress_ = false;
-        resample(true);
-
     }
 
     // -------- Sampling --------
@@ -652,8 +643,6 @@ public:
             vertices_[i].setX(p[0]);
             vertices_[i].setY(p[1]);
         }
-
-        resample(true);
     }
 
     // -------- Sculpting --------
@@ -885,7 +874,6 @@ public:
     void endSculptDeform()
     {
         sculptTemp_.clear();
-        resample(true);
     }
 
     // apply a smooth filter of radius sculptRadius_ and intensity intensity at sculptVertex_
@@ -983,7 +971,6 @@ public:
                 }
             }
         }
-        resample(true);
     }
 
 
@@ -1619,8 +1606,6 @@ public:
                 vertices_[i] = vertices_[i] + dStart.lerp(a, dEnd);
             }
         }
-
-        resample(true);
     }
 
 private:
