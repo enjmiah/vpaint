@@ -419,7 +419,6 @@ LinearSpline::LinearSpline(const SculptCurve::Curve<EdgeSample> & other, bool lo
         isClosed_ = true;
         curve_.makeLoop();
     }
-    curve_.resample();
 }
 
 
@@ -440,7 +439,6 @@ LinearSpline::LinearSpline(EdgeGeometry & other)
         isClosed_ = true;
         curve_.makeLoop();
     }
-    curve_.resample();
 }
 
 
@@ -460,7 +458,6 @@ LinearSpline::LinearSpline(const QList<Eigen::Vector2d> & vertices, bool loop) /
         isClosed_ = true;
         curve_.makeLoop();
     }
-    curve_.resample();
 }
 
 LinearSpline::~LinearSpline()
@@ -907,7 +904,6 @@ void LinearSpline::setLeftRightPos(const Eigen::Vector2d & left,
 {
     if(isClosed())
     {
-        curve_.resample(true);
     }
     else
     {

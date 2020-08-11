@@ -117,7 +117,6 @@ public:
     {
         vertices_.push_back(start);
         vertices_.push_back(end);
-        resample(true);
     }
 
     // Reinitialize curve
@@ -166,76 +165,14 @@ public:
 
         if(sketchInProgress_)
         {
-
-
         // add input point
-        //Eigen::Vector2d p(x,y);
             double dx = vertex.x()-p_.back().p.x();
             double dy = vertex.y()-p_.back().p.y();
         double distSquared = dx*dx + dy*dy;
         if(!(distSquared>0))
             return;
         p_.push_back(Input( vertex, p_.back().s + std::sqrt(distSquared)));
-
-        // erase previous temporary data
-        qTemp_.clear();
-
-        // compute new fit
-        if(p_.size() < (unsigned int) N_)
-        {
-            // Compute fit
-            Fitter * fit = fitter(fitterType_, p_, 0, static_cast<int>(p_.size()), ds_);
-
-            T q = vertices_.back(); // = q_[0]
-            double s = lastFinalS_;                 // = 0
-
-            // sample from fit
-            // while we have not reached the end
-            while(p_.back().s - s > ds_)
-            {
-                // add a new vertex
-                s += 0.75*ds_;
-                q = phi_(s, fit);
-                qTemp_.push_back(q);
-            }
-            // add last vertex
-            T lastP = p_.back().p;
-            qTemp_.push_back(lastP);
-
-            delete fit;
-        }
-        else
-        {
-            // compute new fitting
-            Fitter * fit = fitter(fitterType_, p_,static_cast<int>(p_.size()) - N_, N_, ds_);
-            fits_ << fit;
-
-            T q = vertices_.back();
-            //double qt = qt_.last();
-            double s = lastFinalS_;
-
-            // while we have not reached the end
-            while(p_.back().s - s > ds_)
-            {
-                // add a new vertex
-                s += 0.75*ds_;
-                q = phi_(s);
-                if(s<=p_[p_.size()-N_+1].s)
-                {
-                    pushVertex_(q);
-                    lastFinalS_ = s;
-                }
-                else
-                {
-                    qTemp_.push_back(q);
-                }
-                //viz_.addVertex(q[0],q[1]);
-            }
-
-            // add last vertex
-            T lastP = p_.back().p;
-            qTemp_.push_back(lastP);
-        }
+        pushVertex_(vertex);
 
         lastDs_ = -1;
         }
@@ -243,8 +180,6 @@ public:
 
     void endSketch()
     {
-        for(T vertex : qTemp_)
-            pushVertex_(vertex);
         qTemp_.clear();
 
         //vertices_.insert(vertices_.end(), qTemp_.begin(), qTemp_.end());
@@ -254,12 +189,7 @@ public:
 
         p_.clear(); // clear raw input (used as a test to know is curve is being drawn)
 
-
-
-
         sketchInProgress_ = false;
-        resample(true);
-
     }
 
     // -------- Sampling --------
@@ -304,6 +234,7 @@ public:
     void resample(double ds)    { setDs(ds); resample(); }
     void resample(bool force = false)
     {
+        assert(false);
         // prevent resampling a curve already sampled at the same rate
         if(!force)
         {
@@ -652,8 +583,6 @@ public:
             vertices_[i].setX(p[0]);
             vertices_[i].setY(p[1]);
         }
-
-        resample(true);
     }
 
     // -------- Sculpting --------
@@ -885,7 +814,6 @@ public:
     void endSculptDeform()
     {
         sculptTemp_.clear();
-        resample(true);
     }
 
     // apply a smooth filter of radius sculptRadius_ and intensity intensity at sculptVertex_
@@ -983,7 +911,6 @@ public:
                 }
             }
         }
-        resample(true);
     }
 
 
@@ -1619,8 +1546,6 @@ public:
                 vertices_[i] = vertices_[i] + dStart.lerp(a, dEnd);
             }
         }
-
-        resample(true);
     }
 
 private:
