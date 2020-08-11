@@ -36,6 +36,18 @@
 #include <QSettings>
 #include <QStatusBar>
 #include <QDir>
+#include <QMessageBox>
+
+namespace {
+
+void disabledMessage() {
+    QMessageBox msgBox;
+    msgBox.setIcon(QMessageBox::Information);
+    msgBox.setText("This feature has been disabled.");
+    msgBox.exec();
+}
+
+}
 
 // -------- Initialization --------
 
@@ -239,11 +251,13 @@ void Global::createToolBars()
     for(int i=0; i<NUMBER_OF_TOOL_MODES; i++)
     {
         toolModeActions[i] = new ToolModeAction(static_cast<ToolMode>(i), actionGroup);
-        toolModeActions[i]->setCheckable(true);
         toolModeActions[i]->setShortcutContext(Qt::ApplicationShortcut);
-        toolBar_->addAction(toolModeActions[i]);
-        connect(toolModeActions[i], SIGNAL(triggered(Global::ToolMode)),
-                              this, SLOT(setToolMode(Global::ToolMode)));
+        if (i < NUMBER_OF_TOOL_MODES - 2) {
+            toolModeActions[i]->setCheckable(true);
+            toolBar_->addAction(toolModeActions[i]);
+            connect(toolModeActions[i], SIGNAL(triggered(Global::ToolMode)), this,
+                    SLOT(setToolMode(Global::ToolMode)));
+        }
     }
 
     // Select
@@ -262,13 +276,11 @@ void Global::createToolBars()
     toolModeActions[PAINT]->setText(tr("Paint (F3)"));
     toolModeActions[PAINT]->setIcon(QIcon(":/images/paint.png"));
     toolModeActions[PAINT]->setStatusTip(tr("Paint an empty space or an existing object."));
-    toolModeActions[PAINT]->setShortcut(QKeySequence(Qt::Key_F3));
 
     // Sculpt
     toolModeActions[SCULPT]->setText(tr("Sculpt (F4)"));
     toolModeActions[SCULPT]->setIcon(QIcon(":/images/sculpt.png"));
     toolModeActions[SCULPT]->setStatusTip(tr("Sculpt curves."));
-    toolModeActions[SCULPT]->setShortcut(QKeySequence(Qt::Key_F4));
 
     // ----- Color selectors -----
 
@@ -313,66 +325,6 @@ void Global::createToolBars()
 
     // ---------------------   Faces   ------------------------
 
-    actionCreateFace_ = new QAction(this);
-    actionCreateFace_->setText(tr("Create Face (F)"));
-    actionCreateFace_->setIcon(QIcon(":/images/create-face.png"));
-    actionCreateFace_->setStatusTip(tr("Create a face whose boundary is the selected edges"));
-    actionCreateFace_->setShortcut(QKeySequence(Qt::Key_F));
-    actionCreateFace_->setShortcutContext(Qt::ApplicationShortcut);
-    mainWindow()->addAction(actionCreateFace_);
-    connect(actionCreateFace_, SIGNAL(triggered()), mainWindow()->scene(), SLOT(createFace()));
-
-    actionAddCycles_ = new QAction(this);
-    actionAddCycles_->setText(tr("Add Holes (H)"));
-    actionAddCycles_->setIcon(QIcon(":/images/add-cycles.png"));
-    actionAddCycles_->setStatusTip(tr("Add holes to the selected face, whose boundaries are the selected edges"));
-    actionAddCycles_->setShortcut(QKeySequence(Qt::Key_H));
-    actionAddCycles_->setShortcutContext(Qt::ApplicationShortcut);
-    mainWindow()->addAction(actionAddCycles_);
-    connect(actionAddCycles_, SIGNAL(triggered()), mainWindow()->scene(), SLOT(addCyclesToFace()));
-
-    actionRemoveCycles_ = new QAction(this);
-    actionRemoveCycles_->setText(tr("Remove Holes (Ctrl+H)"));
-    actionRemoveCycles_->setIcon(QIcon(":/images/remove-cycles.png"));
-    actionRemoveCycles_->setStatusTip(tr("Remove holes from the selected face, whose boundaries are the selected edges"));
-    actionRemoveCycles_->setShortcut(QKeySequence(Qt::CTRL + Qt::Key_H));
-    actionRemoveCycles_->setShortcutContext(Qt::ApplicationShortcut);
-    mainWindow()->addAction(actionRemoveCycles_);
-    connect(actionRemoveCycles_, SIGNAL(triggered()), mainWindow()->scene(), SLOT(removeCyclesFromFace()));
-
-    // ---------------------   Topological operations   ------------------------
-
-    actionGlue_ = new QAction(this);
-    actionGlue_->setText(tr("Glue"));
-    actionGlue_->setToolTip(tr("Glue (G)"));
-    actionGlue_->setIcon(QIcon(":/images/glue.png"));
-    actionGlue_->setStatusTip(tr("Glue two endpoints or two curves together"));
-    actionGlue_->setShortcut(QKeySequence(Qt::Key_G));
-    actionGlue_->setShortcutContext(Qt::ApplicationShortcut);
-    mainWindow()->addAction(actionGlue_);
-    connect(actionGlue_, SIGNAL(triggered()), mainWindow()->scene(), SLOT(glue()));
-
-    actionUnglue_ = new QAction(this);
-    actionUnglue_->setText(tr("Explode"));
-    actionUnglue_->setToolTip(tr("Explode (E)"));
-    actionUnglue_->setIcon(QIcon(":/images/unglue.png"));
-    actionUnglue_->setStatusTip(tr("Duplicate the selected objects to disconnect adjacent curves and surfaces"));
-    //actionUnglue_->setShortcut(QKeySequence(Qt::CTRL + Qt::Key_G));
-    actionUnglue_->setShortcut(QKeySequence(Qt::Key_E));
-    actionUnglue_->setShortcutContext(Qt::ApplicationShortcut);
-    mainWindow()->addAction(actionUnglue_);
-    connect(actionUnglue_, SIGNAL(triggered()), mainWindow()->scene(), SLOT(unglue()));
-
-    actionUncut_ = new QAction(this);
-    actionUncut_->setText(tr("Simplify"));
-    actionUncut_->setToolTip(tr("Simplify (Backspace)"));
-    actionUncut_->setIcon(QIcon(":/images/simplify.png"));
-    actionUncut_->setStatusTip(tr("Simplify the selected objects, by merging curves and surfaces together"));
-    actionUncut_->setShortcut(QKeySequence(Qt::Key_Backspace));
-    actionUncut_->setShortcutContext(Qt::ApplicationShortcut);
-    mainWindow()->addAction(actionUncut_);
-    connect(actionUncut_, SIGNAL(triggered()), mainWindow()->scene(), SLOT(uncut()));
-
     // Desired icon size
     double sideLength = 40;
 
@@ -385,24 +337,10 @@ void Global::createToolBars()
     toolModeToolBar_->addAction(actionChangeColor_);
     toolModeToolBar_->addAction(actionChangeEdgeWidth_);
     separatorSelect1_ = toolModeToolBar_->addSeparator();
-    toolModeToolBar_->addAction(actionCreateFace_);
-    toolModeToolBar_->addAction(actionAddCycles_);
-    toolModeToolBar_->addAction(actionRemoveCycles_);
     separatorSelect2_ = toolModeToolBar_->addSeparator();
 
     toolModeToolBar_->widgetForAction(actionChangeColor_)->setFixedSize(sideLength,sideLength);
     toolModeToolBar_->widgetForAction(actionChangeEdgeWidth_)->setFixedSize(sideLength,sideLength);
-    toolModeToolBar_->widgetForAction(actionCreateFace_)->setFixedSize(sideLength,sideLength);
-    toolModeToolBar_->widgetForAction(actionAddCycles_)->setFixedSize(sideLength,sideLength);
-    toolModeToolBar_->widgetForAction(actionRemoveCycles_)->setFixedSize(sideLength,sideLength);
-
-    toolModeToolBar_->addAction(actionGlue_);
-    toolModeToolBar_->addAction(actionUnglue_);
-    toolModeToolBar_->addAction(actionUncut_);
-    toolModeToolBar_->widgetForAction(actionGlue_)->setFixedSize(sideLength+20,sideLength);
-    toolModeToolBar_->widgetForAction(actionUnglue_)->setFixedSize(sideLength+20,sideLength);
-    toolModeToolBar_->widgetForAction(actionUncut_)->setFixedSize(sideLength+20,sideLength);
-
 
     // ---------------------   Sketch options   ------------------------
 
@@ -432,12 +370,12 @@ void Global::createToolBars()
 
     // Planar map mode
     actionPlanarMapMode_ = new QAction(this);
-    actionPlanarMapMode_->setCheckable(true);
-    actionPlanarMapMode_->setChecked(true);
+    actionPlanarMapMode_->setCheckable(false);
+    actionPlanarMapMode_->setChecked(false);
     toolModeToolBar_->addAction(actionPlanarMapMode_);
     toolModeToolBar_->widgetForAction(actionPlanarMapMode_)->setFixedSize(110,sideLength);
     actionPlanarMapMode_->setText(tr("Toggle intersections"));
-    actionPlanarMapMode_->setIcon(QIcon(":/images/planar-map-on.png"));
+    actionPlanarMapMode_->setIcon(QIcon(":/images/planar-map-off.png"));
     actionPlanarMapMode_->setStatusTip(tr("When intersections are enabled, the sketched curve automatically splits existing curves and surfaces."));
     //actionPlanarMapMode_->setShortcut(QKeySequence(Qt::Key_Backspace));
     actionPlanarMapMode_->setShortcutContext(Qt::ApplicationShortcut);
@@ -449,20 +387,20 @@ void Global::createToolBars()
 
     // Snapping
     actionSnapMode_ = new QAction(this);
-    actionSnapMode_->setCheckable(true);
-    actionSnapMode_->setChecked(true);
+    actionSnapMode_->setCheckable(false);
+    actionSnapMode_->setChecked(false);
     toolModeToolBar_->addAction(actionSnapMode_);
     toolModeToolBar_->widgetForAction(actionSnapMode_)->setFixedSize(110,sideLength);
     actionSnapMode_->setText(tr("Toggle snapping"));
-    actionSnapMode_->setIcon(QIcon(":/images/snapping-on.png"));
+    actionSnapMode_->setIcon(QIcon(":/images/snapping-off.png"));
     actionSnapMode_->setStatusTip(tr("When snapping is enabled, the sketched curve is automatically glued to existing curves."));
     //actionSnapMode_->setShortcut(QKeySequence(Qt::Key_Backspace));
     actionSnapMode_->setShortcutContext(Qt::ApplicationShortcut);
     mainWindow()->addAction(actionSnapMode_);
     connect(actionSnapMode_, SIGNAL(triggered()), this, SLOT(toggleSnapping()));
 
-    // Edge width
     actionSnapThreshold_ = toolModeToolBar_->addWidget(snapThreshold_);
+    actionSnapThreshold_->setEnabled(false);
 
     // ---------------------   Sculpt options   ------------------------
 
@@ -518,32 +456,12 @@ bool Global::showCanvas() const
 
 void Global::togglePlanarMapMode()
 {
-    if(actionPlanarMapMode_->isChecked())
-    {
-        actionPlanarMapMode_->setText(tr("Disable intersections"));
-        actionPlanarMapMode_->setIcon(QIcon(":/images/planar-map-on.png"));
-    }
-    else
-    {
-        actionPlanarMapMode_->setText(tr("Enable intersections"));
-        actionPlanarMapMode_->setIcon(QIcon(":/images/planar-map-off.png"));
-    }
+    disabledMessage();
 }
 
 void Global::toggleSnapping()
 {
-    if(actionSnapMode_->isChecked())
-    {
-        actionSnapMode_->setText(tr("Disable snapping"));
-        actionSnapMode_->setIcon(QIcon(":/images/snapping-on.png"));
-        actionSnapThreshold_->setEnabled(true);
-    }
-    else
-    {
-        actionSnapMode_->setText(tr("Enable snapping"));
-        actionSnapMode_->setIcon(QIcon(":/images/snapping-off.png"));
-        actionSnapThreshold_->setEnabled(false);
-    }
+    disabledMessage();
 }
 
 void Global::toggleStylusPressure()
@@ -605,13 +523,7 @@ void Global::setToolMode(Global::ToolMode mode)
     // Hide everything
     actionChangeColor_->setVisible(false);
     actionChangeEdgeWidth_->setVisible(false);
-    actionCreateFace_->setVisible(false);
-    actionAddCycles_->setVisible(false);
-    actionRemoveCycles_->setVisible(false);
 
-    toolModeToolBar_->removeAction(actionGlue_);
-    toolModeToolBar_->removeAction(actionUnglue_);
-    toolModeToolBar_->removeAction(actionUncut_);
     actionPlanarMapMode_->setVisible(false);
     actionSnapMode_->setVisible(false);
     actionUseTabletPressure_->setVisible(false);
@@ -632,17 +544,6 @@ void Global::setToolMode(Global::ToolMode mode)
     case SELECT:
         actionChangeColor_->setVisible(true);
         actionChangeEdgeWidth_->setVisible(true);
-        actionCreateFace_->setVisible(true);
-        actionAddCycles_->setVisible(true);
-        actionRemoveCycles_->setVisible(true);
-        toolModeToolBar_->addAction(actionGlue_);
-        toolModeToolBar_->addAction(actionUnglue_);
-        toolModeToolBar_->addAction(actionUncut_);
-        toolModeToolBar_->widgetForAction(actionGlue_)->setFixedSize(sideLength+20,sideLength);
-        toolModeToolBar_->widgetForAction(actionUnglue_)->setFixedSize(sideLength+20,sideLength);
-        toolModeToolBar_->widgetForAction(actionUncut_)->setFixedSize(sideLength+20,sideLength);
-        separatorSelect1_->setVisible(true);
-        separatorSelect2_->setVisible(true);
         break;
     case SKETCH:
         actionPlanarMapMode_->setVisible(true);

@@ -208,12 +208,6 @@ private:
     // Select
     QAction * actionChangeColor_;
     QAction * actionChangeEdgeWidth_;
-    QAction * actionCreateFace_;
-    QAction * actionAddCycles_;
-    QAction * actionRemoveCycles_;
-    QAction * actionGlue_;
-    QAction * actionUnglue_;
-    QAction * actionUncut_;
     // Sketch
     QAction * actionPlanarMapMode_;
     QAction * actionSnapMode_;
