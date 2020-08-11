@@ -37,7 +37,7 @@ bool segmentIntersection(
     double dsSquared, double &s, double &t)
 {
     // avoid useless computation if too far
-    if((c-a).squaredNorm() < dsSquared)
+    if((c-a).squaredNorm() < 8 * dsSquared)
     {
         // cf page 54 of my written notes
         Eigen::Vector2d u = (b-a);
