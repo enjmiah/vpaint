@@ -72,9 +72,6 @@ public:
     void setVisible(bool b);
 
 signals:
-    void changed();
-    void checkpoint();
-    void needUpdatePicking();
     void selectionChanged();
     void layerAttributesChanged();
 
