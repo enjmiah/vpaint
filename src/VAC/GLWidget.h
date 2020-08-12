@@ -216,8 +216,6 @@ protected:
     // Handing pen tablets
     bool mouse_isTablet_;
     double mouse_tabletPressure_;
-    bool mouse_tabletPressJustReceived_;
-    bool mouse_tabletReleaseJustReceived_;
     // The position when the mousePressEvent occured (in scene coords, only in 2D mode)
     double mouse_Event_XScene_;
     double mouse_Event_YScene_;
@@ -227,7 +225,6 @@ protected:
     bool mouse_HideCursor_;
     // Measure time
     QElapsedTimer mouse_timer_;
-    QElapsedTimer mouse_timerIdleTime_;
     QElapsedTimer mouse_timerComputationTime_;
     // Print mouse/tablet info to the console
     bool mouse_debug_;

@@ -24,7 +24,7 @@
 #include <QApplication>
 #include "Global.h"
 
-#define MIN_SIZE_DRAWING 5
+#define MIN_SIZE_DRAWING 0
 #define GLWIDGET_PI 3.1415926535897932
 
 GLWidget::GLWidget(QWidget *parent, bool isOnly2D) :
@@ -51,8 +51,6 @@ GLWidget::GLWidget(QWidget *parent, bool isOnly2D) :
     mouse_PMRAction_(0),
     mouse_isTablet_(false),
     mouse_tabletPressure_(0),
-    mouse_tabletPressJustReceived_(false),
-    mouse_tabletReleaseJustReceived_(false),
     mouse_HideCursor_(false),
 
     autoCenterScene_(true),
@@ -443,6 +441,9 @@ void GLWidget::PMRReleaseEvent(int action, double /*xScene*/, double /*yScene*/)
 
 void GLWidget::mousePressEvent(QMouseEvent * event)
 {
+    if (mouse_isTablet_) {
+        return;
+    }
     delegateMousePress(event);
 }
 
@@ -450,25 +451,29 @@ void GLWidget::delegateMousePress(QMouseEvent * event)
 {
     emit mousePressed(this);
 
-    // ignore other clics if a mouse button is already pressed
-    if( mouse_LeftButton_ || mouse_MidButton_ || mouse_RightButton_)
-        return;
+    if (event) {
+        // ignore other clics if a mouse button is already pressed
+        if (mouse_LeftButton_ || mouse_MidButton_ || mouse_RightButton_)
+            return;
 
-    // determines which clic has been done
-    mouse_LeftButton_ = false;
-    mouse_MidButton_ = false;
-    mouse_RightButton_ = false;
-    switch(event->button()){
-    case Qt::LeftButton:
-        mouse_LeftButton_ = true;
-        break;
-    case Qt::MidButton:
-        mouse_MidButton_ = true;
-        break;
-    case Qt::RightButton:
-        mouse_RightButton_ = true;
-        break;
-    default:
+        // determines which clic has been done
+        mouse_LeftButton_ = false;
+        mouse_MidButton_ = false;
+        mouse_RightButton_ = false;
+        switch (event->button()) {
+            case Qt::LeftButton:
+                mouse_LeftButton_ = true;
+                break;
+            case Qt::MidButton:
+                mouse_MidButton_ = true;
+                break;
+            case Qt::RightButton:
+                mouse_RightButton_ = true;
+                break;
+        }
+    }
+
+    if (!mouse_LeftButton_ && !mouse_MidButton_ && !mouse_RightButton_) {
         event->ignore();
         return;
     }
@@ -485,8 +490,10 @@ void GLWidget::delegateMousePress(QMouseEvent * event)
         mouse_ShiftWasDown_ = true;
 
     // save data when the mousePressEvent occured
-    mouse_PressEvent_X_ = event->x();
-    mouse_PressEvent_Y_ = event->y();
+    if (event) {
+        mouse_PressEvent_X_ = event->x();
+        mouse_PressEvent_Y_ = event->y();
+    }
     camera_beforeMousePress_ = camera_;
     camera2D_beforeMousePress_ = camera2D_;
 
@@ -517,6 +524,9 @@ void GLWidget::delegateMousePress(QMouseEvent * event)
 
 void GLWidget::mouseMoveEvent(QMouseEvent *event)
 {
+    if (mouse_isTablet_) {
+        return;
+    }
     delegateMouseMove(event);
 }
 
@@ -526,9 +536,11 @@ void GLWidget::delegateMouseMove(QMouseEvent *event)
 {
     emit mouseMoved(this);
 
-    // get window coordinates of event
-    mouse_Event_X_ = event->x();
-    mouse_Event_Y_ = event->y();
+    if (event) {
+        // get window coordinates of event
+        mouse_Event_X_ = event->x();
+        mouse_Event_Y_ = event->y();
+    }
 
     // convert to scene coordinates
     if(isOnly2D_)
@@ -541,12 +553,7 @@ void GLWidget::delegateMouseMove(QMouseEvent *event)
     // if there  is no mouse  button down, it  is a void  move event
     if(!(mouse_LeftButton_ || mouse_MidButton_ || mouse_RightButton_))
     {
-        qint64 idleTime = mouse_timerIdleTime_.elapsed();
-        if(idleTime>1)
-        {
-            MoveEvent(mouse_Event_XScene_, mouse_Event_YScene_);
-        }
-        mouse_timerIdleTime_.start();
+        MoveEvent(mouse_Event_XScene_, mouse_Event_YScene_);
         return;
     }
     
@@ -569,30 +576,30 @@ void GLWidget::delegateMouseMove(QMouseEvent *event)
     // calls the move event
     if(!mouse_ClicAction_)
     {
-        qint64 idleTime = mouse_timerIdleTime_.elapsed();
-        if(idleTime>1)
-        {
-            PMRMoveEvent(mouse_PMRAction_, mouse_Event_XScene_, mouse_Event_YScene_);
-        }
-        mouse_timerIdleTime_.start();
+        PMRMoveEvent(mouse_PMRAction_, mouse_Event_XScene_, mouse_Event_YScene_);
     }
 }
 
 void GLWidget::mouseReleaseEvent(QMouseEvent *event)
 {
+    if (mouse_isTablet_) {
+        return;
+    }
     delegateMouseRelease(event);
 }
 void GLWidget::delegateMouseRelease(QMouseEvent *event)
 {
     emit mouseReleased(this);
 
-      // if there is no mouse button down, just ignore this
-      if(!(mouse_LeftButton_ || mouse_MidButton_ || mouse_RightButton_))
-        return;
+    if (event) {
+        // if there is no mouse button down, just ignore this
+        if (!(mouse_LeftButton_ || mouse_MidButton_ || mouse_RightButton_))
+            return;
 
-      // get window coordinates of event
-      mouse_Event_X_ = event->x();
-      mouse_Event_Y_ = event->y();
+        // get window coordinates of event
+        mouse_Event_X_ = event->x();
+        mouse_Event_Y_ = event->y();
+    }
 
       // convert to scene coordinates
       if(isOnly2D_)
@@ -602,27 +609,29 @@ void GLWidget::delegateMouseRelease(QMouseEvent *event)
           mouse_Event_YScene_ = p[1];
       }
 
-      // set the mouse button state to false, only if it's the 
-      // corresponding button 
-      switch(event->button()){
-      case Qt::LeftButton:
-        if(!mouse_LeftButton_)
-          return;
-        mouse_LeftButton_ = false;
-        break;
-      case Qt::MidButton:
-        if(!mouse_MidButton_)
-          return;
-        mouse_MidButton_ = false;
-        break;
-      case Qt::RightButton:
-        if(!mouse_RightButton_)
-          return;
-        mouse_RightButton_ = false;
-        break;
-      default:
-        event->ignore();
-        return;
+      if (event) {
+          // set the mouse button state to false, only if it's the
+          // corresponding button
+          switch (event->button()) {
+              case Qt::LeftButton:
+                  if (!mouse_LeftButton_)
+                      return;
+                  mouse_LeftButton_ = false;
+                  break;
+              case Qt::MidButton:
+                  if (!mouse_MidButton_)
+                      return;
+                  mouse_MidButton_ = false;
+                  break;
+              case Qt::RightButton:
+                  if (!mouse_RightButton_)
+                      return;
+                  mouse_RightButton_ = false;
+                  break;
+              default:
+                  event->ignore();
+                  return;
+          }
       }
 
       // if there is no possible actions, ignore this too
@@ -649,20 +658,26 @@ void GLWidget::tabletEvent(QTabletEvent * event)
     if(event->type() == QEvent::TabletPress)
     {
         mouse_isTablet_ = true;
+        mouse_LeftButton_ = true;
+        mouse_Event_X_ = mouse_PressEvent_X_ = event->x();
+        mouse_Event_Y_ = mouse_PressEvent_Y_ = event->y();
+        delegateMousePress(nullptr);
     }
     else if(event->type() == QEvent::TabletMove)
     {
+        mouse_Event_X_ = event->x();
+        mouse_Event_Y_ = event->y();
+        delegateMouseMove(nullptr);
     }
     else if(event->type() == QEvent::TabletRelease)
     {
         mouse_isTablet_ = false;
+        mouse_LeftButton_ = false;
+        mouse_Event_X_ = event->x();
+        mouse_Event_Y_ = event->y();
+        delegateMouseRelease(nullptr);
     }
-    else
-    {
-    }
-
-    // Ignore event, so Qt generates a mouse event.
-    event->ignore();
+    event->accept();
 }
 
 void GLWidget::wheelEvent(QWheelEvent *event)
