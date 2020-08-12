@@ -1019,7 +1019,6 @@ void View::drawScene()
 {
     if(!mouse_HideCursor_)
     {
-        setCursor(Qt::ArrowCursor);
         switch(global()->toolMode())
         {
         case Global::SELECT:
@@ -1035,6 +1034,7 @@ void View::drawScene()
             setCursor(Qt::CrossCursor);
             break;
         default:
+            setCursor(Qt::ArrowCursor);
             break;
         }
     }
