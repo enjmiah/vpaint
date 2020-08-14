@@ -234,7 +234,6 @@ private:
       QAction * actionCopy;
       QAction * actionPaste;
       QAction * actionSmartDelete;
-      QAction * actionHardDelete;
       QAction * actionTest;
     // VIEW
     QMenu * menuView;

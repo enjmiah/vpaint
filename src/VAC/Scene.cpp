@@ -726,7 +726,27 @@ void Scene::smartDelete()
     Layer * layer = activeLayer();
     if(layer)
     {
-        layer->vac()->smartDelete();
+        Layer * deleteLayer = nullptr;
+        for (auto * l : layers_) {
+            if (l->name() == "__deleted__") {
+                deleteLayer = l;
+                break;
+            }
+        }
+        // Create __deleted__ layer if it doesn't already exist
+        if (!deleteLayer) {
+            const int activeLayerIdx = layers_.indexOf(layer);
+            deleteLayer = new Layer("__deleted__");
+            addLayer_(deleteLayer, true);
+            deleteLayer->setVisible(false);
+            // setActiveLayer(activeLayerIdx);
+            activeLayerIndex_ = activeLayerIdx;
+        }
+        // Move selected objects to __deleted__ layer
+        VectorAnimationComplex::VAC * clip = nullptr;
+        layer->vac()->cut(clip, true);
+        deleteLayer->vac()->paste(clip);
+        delete clip;
     }
 }
 

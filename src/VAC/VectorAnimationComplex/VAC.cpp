@@ -5441,7 +5441,6 @@ void VAC::lowerToBottom()
     }
 }
 
-
 void VAC::altRaise()
 {
     if(numSelectedCells() > 0)
@@ -5578,22 +5577,23 @@ void VAC::uncut()
     }
 }
 
-void VAC::cut(VAC* & clipboard)
+void VAC::cut(VAC* & clipboard, bool silent)
 {
     if(selectedCells().isEmpty())
         return;
 
-    if(clipboard)
-        delete clipboard;
+    delete clipboard;
 
     clipboard = subcomplex(selectedCells());
     clipboard->timeCopy_ = global()->activeTime();
 
     smartDelete_(selectedCells());
 
-    emit needUpdatePicking();
-    emit changed();
-    emit checkpoint();
+    if (!silent) {
+        emit needUpdatePicking();
+        emit changed();
+        emit checkpoint();
+    }
 }
 
 void VAC::copy(VAC* & clipboard)

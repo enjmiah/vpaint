@@ -264,7 +264,7 @@ public slots:
     void glue();
     void unglue();
     void uncut();
-    void cut(VAC* & clipboard);
+    void cut(VAC* & clipboard, bool silent = false);
     void copy(VAC* & clipboard);
     void paste(VAC* & clipboard);
     void resetCellsToConsiderForCutting();

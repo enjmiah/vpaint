@@ -1596,20 +1596,6 @@ void MainWindow::createActions()
     actionSmartDelete->setShortcutContext(Qt::ApplicationShortcut);
     connect(actionSmartDelete, SIGNAL(triggered()), scene_, SLOT(smartDelete()));
 
-    // Hard Delete
-    actionHardDelete = new QAction(tr("Hard Delete"), this);
-    actionHardDelete->setStatusTip(tr("Delete the selected objects and adjacent objects together."));
-    actionHardDelete->setShortcut(QKeySequence(Qt::CTRL + Qt::Key_Delete));
-    actionHardDelete->setShortcutContext(Qt::ApplicationShortcut);
-    connect(actionHardDelete, SIGNAL(triggered()), scene_, SLOT(deleteSelectedCells()));
-
-    // Hard Delete
-    actionTest = new QAction(tr("Test"), this);
-    actionTest->setStatusTip(tr("For development tests: quick and dirty function."));
-    actionTest->setShortcut(QKeySequence(Qt::Key_T));
-    actionTest->setShortcutContext(Qt::ApplicationShortcut);
-    connect(actionTest, SIGNAL(triggered()), scene_, SLOT(test()));
-
     ///////////////        VIEW        ///////////////
 
     // Zoom In
@@ -2075,7 +2061,6 @@ void MainWindow::createMenus()
     menuEdit->addAction(actionPaste);
     menuEdit->addSeparator();
     menuEdit->addAction(actionSmartDelete);
-    menuEdit->addAction(actionHardDelete);
     //menuEdit->addAction(actionTest);
     menuBar()->addMenu(menuEdit);
 
