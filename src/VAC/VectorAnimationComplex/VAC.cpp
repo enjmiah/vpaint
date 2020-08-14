@@ -4129,10 +4129,13 @@ void VAC::insertSketchedEdgeInVAC(double tolerance, bool useFaceToConsiderForCut
             curves[i].setEndPoints(vStart, vEnd);
 
             // Create geometry out of it
-            EdgeGeometry * geometry = new LinearSpline(curves[i]);
+            LinearSpline * geometry = new LinearSpline(curves[i]);
             KeyEdge * iedge = 0;
-            if(geometry->length() > tolerance)
+            if(geometry->length() > tolerance) {
+                geometry->setStrokeWidth(sketchedEdge_->strokeWidth());
+                geometry->setZoomLevel(sketchedEdge_->zoomLevel());
                 iedge = newKeyEdge(timeInteractivity_, startNode, endNode, geometry);
+            }
 
             // if planar map mode, cut a potential face underneath
             if(iedge && global()->planarMapMode())

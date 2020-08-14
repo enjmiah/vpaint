@@ -16,10 +16,12 @@
 
 #include "EdgeGeometry.h"
 
-#include <QTextStream>
 #include "../XmlStreamWriter.h"
 #include "../XmlStreamReader.h"
 
+#include "../Global.h"
+#include "../MainWindow.h"
+#include "../View.h"
 #include "../SaveAndLoad.h"
 #include "../OpenGL.h"
 #include <cmath>
@@ -79,10 +81,19 @@ EdgeGeometry * EdgeGeometry::clone()
      QStringRef curveData = str.mid(i+1, str.length()-i-2);
 
      // Switch on type
-     if(curveType == "xywdense" || curveType == "xywtdense")
-         return new LinearSpline(curveData, curveType);
-     else
-         return 0;
+     if (curveType == "xywdense" || curveType == "xywtdense") {
+         bool ok;
+         double zoom = xml.attributes().value("zoom").toDouble(&ok);
+         if (!ok)
+             zoom = -1.0;
+         double width = xml.attributes().value("width").toDouble(&ok);
+         if (!ok)
+             width = -1.0;
+         LinearSpline * s = new LinearSpline(curveData, curveType, width, zoom);
+         return s;
+     } else {
+         return nullptr;
+     }
  }
 
 void EdgeGeometry::save(QTextStream & out)
@@ -466,7 +477,10 @@ LinearSpline::~LinearSpline()
 
 LinearSpline * LinearSpline::clone()
 {
-    return new LinearSpline(curve_, isClosed());
+    auto * s = new LinearSpline(curve_, isClosed());
+    s->setZoomLevel(zoomLevel_);
+    s->setStrokeWidth(strokeWidth_);
+    return s;
 }
 
 // ---------------------- Draw ------------------------
@@ -732,7 +746,7 @@ QString double2qstring(double x)
 }
 }
 
-LinearSpline::LinearSpline(const QStringRef & str, const QStringRef & subtype)
+LinearSpline::LinearSpline(const QStringRef & str, const QStringRef & subtype, double width, double zoom)
 {
     // Clear curve
     curve_.clear();
@@ -762,6 +776,9 @@ LinearSpline::LinearSpline(const QStringRef & str, const QStringRef & subtype)
     curve_.setDs(d[0]);
     curve_.setVertices(vertices);
     clearSampling();
+
+    strokeWidth_ = width;
+    zoomLevel_ = zoom;
 }
 
 /*
@@ -811,6 +828,8 @@ void LinearSpline::write(XmlStreamWriter & xml) const
     }
 
     xml.writeAttribute("curve", "xywtdense(" + d + ")");
+    xml.writeAttribute("width", double2qstring(strokeWidth_));
+    xml.writeAttribute("zoom", double2qstring(zoomLevel_));
 }
 
 
@@ -818,7 +837,11 @@ void LinearSpline::write(XmlStreamWriter & xml) const
 
 int LinearSpline::size() const { return curve_.size(); }
 EdgeSample LinearSpline::operator[] (int i) const { return curve_[i]; }
-void LinearSpline::beginSketch(const EdgeSample & sample) { curve_.beginSketch(sample); }
+void LinearSpline::beginSketch(const EdgeSample & sample) {
+    strokeWidth_ = global()->settings().edgeWidth();
+    zoomLevel_ = global()->mainWindow()->activeView()->zoom();
+    curve_.beginSketch(sample);
+}
 void LinearSpline::continueSketch(const EdgeSample & sample) { curve_.continueSketch(sample); }
 void LinearSpline::endSketch() { curve_.endSketch(); }
 
