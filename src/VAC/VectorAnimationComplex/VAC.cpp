@@ -1760,6 +1760,8 @@ void VAC::endSketchEdge()
 
         sketchedEdge_->endSketch();
 
+        sketchedEdge_->resample(); // not sure if necessary
+
         facesToConsiderForCutting_ = hoveredFacesOnMouseMove_;
         if(hoveredFaceOnMousePress_)
             facesToConsiderForCutting_.insert(hoveredFaceOnMousePress_);
