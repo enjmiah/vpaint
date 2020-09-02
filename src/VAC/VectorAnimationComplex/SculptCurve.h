@@ -1599,7 +1599,9 @@ public:
             T dEnd = newEnd - vertices_.back();
 
             double l = length();
-            assert(l>0);
+            if (l == 0.0) {
+                return;
+            }
             for(int i=0; i<n; ++i)
             {
                 double a = arclengths_[i] / l;
