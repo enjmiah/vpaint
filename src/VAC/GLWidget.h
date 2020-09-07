@@ -206,10 +206,10 @@ protected:
     bool mouse_ControlWasDown_;
     bool mouse_ShiftWasDown_;
     // The position when the mousePressEvent occured (in window coords)
-    int mouse_Event_X_;
-    int mouse_Event_Y_;
-    int mouse_PressEvent_X_;
-    int mouse_PressEvent_Y_;
+    double mouse_Event_X_;
+    double mouse_Event_Y_;
+    double mouse_PressEvent_X_;
+    double mouse_PressEvent_Y_;
     // Determines if  the action is  a "clic" or a press->move->release
     int mouse_ClicAction_;
     int mouse_PMRAction_;

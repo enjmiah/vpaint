@@ -659,22 +659,25 @@ void GLWidget::tabletEvent(QTabletEvent * event)
     {
         mouse_isTablet_ = true;
         mouse_LeftButton_ = true;
-        mouse_Event_X_ = mouse_PressEvent_X_ = event->x();
-        mouse_Event_Y_ = mouse_PressEvent_Y_ = event->y();
+        const auto& p = event->posF();
+        mouse_Event_X_ = mouse_PressEvent_X_ = p.x();
+        mouse_Event_Y_ = mouse_PressEvent_Y_ = p.y();
         delegateMousePress(nullptr);
     }
     else if(event->type() == QEvent::TabletMove)
     {
-        mouse_Event_X_ = event->x();
-        mouse_Event_Y_ = event->y();
+        const auto& p = event->posF();
+        mouse_Event_X_ = p.x();
+        mouse_Event_Y_ = p.y();
         delegateMouseMove(nullptr);
     }
     else if(event->type() == QEvent::TabletRelease)
     {
         mouse_isTablet_ = false;
         mouse_LeftButton_ = false;
-        mouse_Event_X_ = event->x();
-        mouse_Event_Y_ = event->y();
+        const auto& p = event->posF();
+        mouse_Event_X_ = p.x();
+        mouse_Event_Y_ = p.y();
         delegateMouseRelease(nullptr);
     }
     event->accept();
