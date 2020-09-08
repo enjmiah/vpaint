@@ -103,7 +103,6 @@ private slots:
     // ---- Edit ----
     void addToUndoStack();
     void undo();
-    void redo();
     void cut();
     void copy();
     void paste();
@@ -229,7 +228,6 @@ private:
     // EDIT
     QMenu * menuEdit;
       QAction * actionUndo;
-      QAction * actionRedo;
       QAction * actionCut;
       QAction * actionCopy;
       QAction * actionPaste;

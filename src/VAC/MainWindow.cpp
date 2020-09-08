@@ -421,18 +421,6 @@ void MainWindow::undo()
     }
 }
 
-void MainWindow::redo()
-{
-    if(undoIndex_<undoStack_.size()-1)
-    {
-        goToUndoIndex_(undoIndex_ + 1);
-    }
-    else
-    {
-        statusBar()->showMessage(tr("Nothing to redo"));
-    }
-}
-
 void MainWindow::cut()
 {
     scene_->cut(clipboard_);
@@ -1560,12 +1548,6 @@ void MainWindow::createActions()
     actionUndo->setShortcut(QKeySequence::Undo);
     connect(actionUndo, SIGNAL(triggered()), this, SLOT(undo()));
 
-    // Redo
-    actionRedo = new QAction(/*QIcon(":/iconRedo"),*/ tr("&Redo"), this);
-    actionRedo->setStatusTip(tr("Redo an undone action."));
-    actionRedo->setShortcut(QKeySequence::Redo);
-    connect(actionRedo, SIGNAL(triggered()), this, SLOT(redo()));
-
     // Cut
     actionCut = new QAction(tr("Cut"), this);
     actionCut->setStatusTip(tr("Move selected objects to the clipboard."));
@@ -2054,7 +2036,6 @@ void MainWindow::createMenus()
     /// ---- EDIT ----
     menuEdit = new QMenu(tr("&Edit"));
     menuEdit->addAction(actionUndo);
-    menuEdit->addAction(actionRedo);
     menuEdit->addSeparator();
     menuEdit->addAction(actionCut);
     menuEdit->addAction(actionCopy);
