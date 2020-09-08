@@ -646,15 +646,6 @@ void triangulateHelper(const QList<EdgeSample> & samples, Triangles & triangles,
 
 void LinearSpline::triangulate(Triangles & triangles)
 {
-    // Don't draw at all too small edges
-    // this prevents popping join artefacts during smooth animation
-    // when an edge shrinks to a vertex
-    if(length() < 0.1)
-    {
-        triangles.clear();
-        return;
-    }
-
     QList<EdgeSample> samples;
     for(int i=0; i<curve_.size(); ++i)
     {
