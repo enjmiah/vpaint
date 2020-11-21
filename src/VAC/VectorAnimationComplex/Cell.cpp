@@ -179,6 +179,7 @@ Cell::Cell(Cell * other)
     spatialStar_ = other->spatialStar_;
     temporalStarBefore_ = other->temporalStarBefore_;
     temporalStarAfter_ = other->temporalStarAfter_;
+    deletionTime_ = other->deletionTime();
 }
 
 void Cell::remapPointers(VAC * newVAC)
@@ -371,6 +372,7 @@ void Cell::glColor3D_()
 
 void Cell::draw(Time time, ViewSettings & viewSettings)
 {
+    // if (!exists(time) || deletionTime_ > 0.0)
     if (!exists(time))
         return;
 
@@ -732,9 +734,9 @@ void Cell::write(XmlStreamWriter & xml) const
     xml.writeEndElement();
 }
 
-void Cell::write_(XmlStreamWriter & /*xml*/) const
+void Cell::write_(XmlStreamWriter & xml) const
 {
-
+    xml.writeAttribute("deletiontime", QString().setNum(deletionTime_, 'g', 15));
 }
 
 QString Cell::xmlType_() const
@@ -762,6 +764,10 @@ Cell::Cell(VAC * vac, XmlStreamReader & xml) :
         color_[1] = 0;
         color_[2] = 0;
         color_[3] = 1;
+    }
+
+    if (xml.attributes().hasAttribute("deletiontime")) {
+        deletionTime_ = xml.attributes().value("deletiontime").toDouble();
     }
 
     colorHighlighted_[0] = 1;

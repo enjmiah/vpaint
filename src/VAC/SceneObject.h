@@ -25,6 +25,9 @@
 
 class QTextStream;
 class QToolBar;
+namespace VectorAnimationComplex {
+class KeyEdge;
+}
 
 class SceneObject: public QObject
 {
@@ -71,6 +74,7 @@ signals:
 
     void checkpoint(); // when emitted, the whole scene is copied and put in the
                        // undo list. Make sure to call this only once, when necessary
+    void checkpoint(VectorAnimationComplex::KeyEdge*);
 
     void needUpdatePicking(); // Make sure to call this only once, when necessary
 

@@ -78,7 +78,7 @@ EdgeGeometry * EdgeGeometry::clone()
      QStringRef str =  xml.attributes().value("curve");
      int i = str.indexOf('(');
      QStringRef curveType = str.left(i);
-     QStringRef curveData = str.mid(i+1, str.length()-i-2);
+     QStringRef curveData = str.mid(i + 1, str.length() - i - 2);
 
      // Switch on type
      if (curveType == "xywdense" || curveType == "xywtdense") {
@@ -89,7 +89,11 @@ EdgeGeometry * EdgeGeometry::clone()
          double width = xml.attributes().value("width").toDouble(&ok);
          if (!ok)
              width = -1.0;
-         LinearSpline * s = new LinearSpline(curveData, curveType, width, zoom);
+         double deletionTime = xml.attributes().value("deletiontime").toDouble(&ok);
+         if (!ok)
+             deletionTime = -1.0;
+         LinearSpline * s =
+             new LinearSpline(curveData, curveType, width, zoom);
          return s;
      } else {
          return nullptr;
@@ -515,8 +519,7 @@ void triangulateHelper(const QList<EdgeSample> & samples, Triangles & triangles,
     // Initialization and basic case
     triangles.clear();
     int n=samples.size();
-    if(n<2)
-        return;
+    assert(n > 0);
 
     // Helper function
     auto getD = [] (double x1, double y1, double x2, double y2)
@@ -536,66 +539,64 @@ void triangulateHelper(const QList<EdgeSample> & samples, Triangles & triangles,
         double ax, ay, bx, by; };
     QList<QuadInfo> quads;
 
-    // Computing the di's
-    QuadInfo qs;
-    if(closed)
-        qs.d = getD(samples[n-2].x(), samples[n-2].y(), samples[n-1].x(), samples[n-1].y());
-    else
-        qs.d = getD(samples[0].x(), samples[0].y(), samples[1].x(), samples[1].y());
-    quads << qs;
-    for(int i=1; i<n; i++)
-    {
-        qs.d = getD(samples[i-1].x(), samples[i-1].y(), samples[i].x(), samples[i].y());
-        quads << qs;
-    }
-    if(closed)
-        qs.d = getD(samples[0].x(), samples[0].y(), samples[1].x(), samples[1].y());
-    else
-        qs.d = getD(samples[n-2].x(), samples[n-2].y(), samples[n-1].x(), samples[n-1].y());
-    quads << qs;
-
-    // Computing the Ai's and Bi's
-    for(int i=0; i<n; i++)
-    {
-        double h = 0.5 * samples[i].width();
-
-        // Compute bisection basis
-        Eigen::Vector2d u = quads[i].d + quads[i+1].d;
-        Eigen::Vector2d v;
-        double unorm2 = u.squaredNorm();
-        if(unorm2 > 0)
-        {
-            u.normalize();
-            v = Eigen::Vector2d(-u[1],u[0]);
-        }
+    if (n > 1) {
+        // Computing the di's
+        QuadInfo qs;
+        if (closed)
+            qs.d = getD(samples[n - 2].x(), samples[n - 2].y(), samples[n - 1].x(),
+                        samples[n - 1].y());
         else
-        {
-            v = quads[i].d;
+            qs.d = getD(samples[0].x(), samples[0].y(), samples[1].x(), samples[1].y());
+        quads << qs;
+        for (int i = 1; i < n; i++) {
+            qs.d = getD(samples[i - 1].x(), samples[i - 1].y(), samples[i].x(),
+                        samples[i].y());
+            quads << qs;
+        }
+        if (closed)
+            qs.d = getD(samples[0].x(), samples[0].y(), samples[1].x(), samples[1].y());
+        else
+            qs.d = getD(samples[n - 2].x(), samples[n - 2].y(), samples[n - 1].x(),
+                        samples[n - 1].y());
+        quads << qs;
+
+        // Computing the Ai's and Bi's
+        for (int i = 0; i < n; i++) {
+            double h = 0.5 * samples[i].width();
+
+            // Compute bisection basis
+            Eigen::Vector2d u = quads[i].d + quads[i + 1].d;
+            Eigen::Vector2d v;
+            double unorm2 = u.squaredNorm();
+            if (unorm2 > 1e-6) {
+                u.normalize();
+                v = Eigen::Vector2d(-u[1], u[0]);
+            } else {
+                v = quads[i].d;
+            }
+
+            quads[i].ax = samples[i].x() + h * v[0];
+            quads[i].ay = samples[i].y() + h * v[1];
+
+            quads[i].bx = samples[i].x() - h * v[0];
+            quads[i].by = samples[i].y() - h * v[1];
         }
 
-        quads[i].ax = samples[i].x() + h * v[0];
-        quads[i].ay = samples[i].y() + h * v[1];
+        // tesselate
+        for (int i = 1; i < n; i++) {
+            double ax = quads[i - 1].ax;
+            double ay = quads[i - 1].ay;
+            double bx = quads[i - 1].bx;
+            double by = quads[i - 1].by;
 
-        quads[i].bx = samples[i].x() - h * v[0];
-        quads[i].by = samples[i].y() - h * v[1];
-    }
+            double cx = quads[i].ax;
+            double cy = quads[i].ay;
+            double dx = quads[i].bx;
+            double dy = quads[i].by;
 
-    // tesselate
-    for(int i=1; i<n; i++)
-    {
-        double ax = quads[i-1].ax;
-        double ay = quads[i-1].ay;
-        double bx = quads[i-1].bx;
-        double by = quads[i-1].by;
-
-        double cx = quads[i].ax;
-        double cy = quads[i].ay;
-        double dx = quads[i].bx;
-        double dy = quads[i].by;
-
-
-        triangles.append(ax,ay,bx,by,dx,dy);
-        triangles.append(ax,ay,dx,dy,cx,cy);
+            triangles.append(ax, ay, bx, by, dx, dy);
+            triangles.append(ax, ay, dx, dy, cx, cy);
+        }
     }
 
     // Start cap
@@ -621,7 +622,7 @@ void triangulateHelper(const QList<EdgeSample> & samples, Triangles & triangles,
     }
 
     // End cap
-    if (!closed)
+    if (!closed && n > 1)
     {
         int m = 50;
         double cx = samples.back().x();
@@ -737,7 +738,8 @@ QString double2qstring(double x)
 }
 }
 
-LinearSpline::LinearSpline(const QStringRef & str, const QStringRef & subtype, double width, double zoom)
+LinearSpline::LinearSpline(const QStringRef & str, const QStringRef & subtype,
+                           double width, double zoom)
 {
     // Clear curve
     curve_.clear();

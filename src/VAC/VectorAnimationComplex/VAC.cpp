@@ -735,6 +735,9 @@ void VAC::drawPick(Time time, ViewSettings & viewSettings)
         // Draw all cells
         for(auto c: zOrdering_)
         {
+            if (c->deletionTime() > 0.0) {
+                continue;
+            }
             c->drawPick(time, viewSettings);
         }
     }
@@ -744,33 +747,31 @@ void VAC::drawPick(Time time, ViewSettings & viewSettings)
         // Draw all cells
         for(auto c: zOrdering_)
         {
+            if (c->deletionTime() > 0.0) {
+                continue;
+            }
             c->drawPickTopology(time, viewSettings);
         }
     }
 
     else if( (displayMode == ViewSettings::ILLUSTRATION_OUTLINE) )
     {
-        // first pass: pick faces normally
-        for(auto c: zOrdering_)
-        {
-            if(c->toFaceCell())
-                c->drawPick(time, viewSettings);
-        }
-
-
         // second pass: pick vertices and edges as outline
         for(auto c: zOrdering_)
         {
+            if (c->deletionTime() > 0.0) {
+                continue;
+            }
             if(!c->toFaceCell())
                 c->drawPickTopology(time, viewSettings);
         }
     }
 
     // Transform tool
-    if(global()->toolMode() == Global::SELECT && viewSettings.isMainDrawing())
-    {
-        transformTool_.drawPick(selectedCells_, time, viewSettings);
-    }
+    //if(global()->toolMode() == Global::SELECT && viewSettings.isMainDrawing())
+    //{
+    //    transformTool_.drawPick(selectedCells_, time, viewSettings);
+    //}
 }
 
 
@@ -1650,6 +1651,7 @@ void VAC::continueRectangleOfSelection(double x, double y)
     for(Cell * c: zOrdering_)
     {
         if (c->isPickable(timeInteractivity_) &&
+            !(c->deletionTime() > 0.0) &&
             c->intersects(timeInteractivity_, bb))
         {
             cellsInRectangleOfSelection_ << c;
@@ -1765,14 +1767,14 @@ void VAC::endSketchEdge()
             facesToConsiderForCutting_.insert(hoveredFaceOnMousePress_);
         if(hoveredFaceOnMouseRelease_)
             facesToConsiderForCutting_.insert(hoveredFaceOnMouseRelease_);
-        insertSketchedEdgeInVAC();
+        auto * new_e = insertSketchedEdgeInVAC();
 
         delete sketchedEdge_;
         sketchedEdge_ = 0;
 
 
         //emit changed();
-        emit checkpoint();
+        emit checkpoint(new_e);
     }
 }
 
@@ -3417,756 +3419,21 @@ bool VAC::uncut_(KeyEdge * e)
     return true;
 }
 
-void VAC::insertSketchedEdgeInVAC()
+KeyEdge* VAC::insertSketchedEdgeInVAC()
 {
     double tolerance = global()->snapThreshold();
     double toleranceEpsilon = 1e-2;
     if( (tolerance < toleranceEpsilon) || !(global()->snapMode()) )
         tolerance = 1e-2;
-    insertSketchedEdgeInVAC(tolerance);
+    return insertSketchedEdgeInVAC(tolerance);
 }
 
-void VAC::insertSketchedEdgeInVAC(double tolerance, bool useFaceToConsiderForCutting)
+KeyEdge* VAC::insertSketchedEdgeInVAC(double tolerance, bool useFaceToConsiderForCutting)
 {
-    // --------------------------------------------------------------------
-    // ---------------------- Input Variables -----------------------------
-    // --------------------------------------------------------------------
-
-    bool intersectWithSelf = global()->planarMapMode();
-    bool intersectWithOthers = global()->planarMapMode();
-
-    // --------------------------------------------------------------------
-    // ----------------- Compute dirty intersections ----------------------
-    // --------------------------------------------------------------------
-
-    typedef SculptCurve::Curve<EdgeSample> SketchedEdge;
-    std::vector<             SculptCurve::Intersection  > selfIntersections;
-    std::vector< std::vector<SculptCurve::Intersection> > othersIntersections;
-
-    // Lengths of the sketched edge and existing ("others") edges
-    double lSelf = sketchedEdge_->length(); // compute it now
-    std::vector<double> lOthers;            // will be computed inside the loop
-
-    // Store geometry of existing edges as a "SketchedEdge"
-    std::vector< SculptCurve::Curve<EdgeSample>,Eigen::aligned_allocator<SculptCurve::Curve<EdgeSample> >  > sketchedEdges; // sketchedEdges.size() == nEdges.
-
-    // Compute intersections with self
-    if(intersectWithSelf)
-        selfIntersections = sketchedEdge_->curve().selfIntersections(tolerance);
-
-    // Keyframe existing inbetween edge that intersect with sketched edge
-    if(intersectWithOthers)
-    {
-        InbetweenEdgeSet inbetweenEdges;
-        foreach(Cell * cell, cells())
-        {
-            InbetweenEdge * sedge = cell->toInbetweenEdge();
-            if(sedge && sedge->exists(timeInteractivity_))
-                inbetweenEdges << sedge;
-        }
-        foreach(InbetweenEdge * sedge, inbetweenEdges)
-        {
-            // Get sampling as a QList of EdgeSamples
-            QList<EdgeSample> sampling = sedge->getSampling(timeInteractivity_);
-
-            // Convert sampling to a std::vector of EdgeSamples
-            std::vector<EdgeSample,Eigen::aligned_allocator<EdgeSample> > stdSampling;
-            for(int i=0; i<sampling.size(); ++i)
-                stdSampling << sampling[i];
-
-            // Convert sampling to a SculptCurve::Curve<EdgeSample>
-            SculptCurve::Curve<EdgeSample> sketchedEdge;
-            sketchedEdge.setVertices(stdSampling);
-
-            // Compute intersections
-            std::vector<SculptCurve::Intersection> intersections = sketchedEdge_->curve().intersections(sketchedEdge, tolerance);
-
-            // Keyframe edge if there are some intersections
-            if(intersections.size() > 0)
-                keyframe_(sedge, timeInteractivity_);
-        }
-    }
-
-    // Compute intersections with others
-    KeyEdgeList iedgesBefore; // the list of edges before they are split by the newly sketched edge
-    int nEdges = 0;               // the number of them
-    if(intersectWithOthers)
-    {
-        // Get existing edges
-        iedgesBefore = instantEdges(timeInteractivity_);
-        nEdges = iedgesBefore.size();
-
-        // For each of them, compute intersections with sketched edge
-        foreach (KeyEdge * iedge, iedgesBefore)
-        {
-            // Convert geometry of instant edge to a SketchedEdge
-            EdgeGeometry * geometry = iedge->geometry();
-            LinearSpline * linearSpline = dynamic_cast<LinearSpline *>(geometry);
-            if(linearSpline)
-            {
-                sketchedEdges << linearSpline->curve() ;
-            }
-            else
-            {
-                QList<Eigen::Vector2d> eigenSampling = geometry->sampling(ds_);
-                std::vector<EdgeSample,Eigen::aligned_allocator<EdgeSample> > vertices;
-                for(int i=0; i<eigenSampling.size(); ++i)
-                    vertices << EdgeSample(eigenSampling[i][0], eigenSampling[i][1], 10); // todo: get actual width
-                sketchedEdges << SculptCurve::Curve<EdgeSample>();
-                sketchedEdges.back().setVertices(vertices);
-            }
-
-            // Compute intersections
-            othersIntersections << sketchedEdge_->curve().intersections(sketchedEdges.back(), tolerance);
-
-            // Store length
-            lOthers << sketchedEdges.back().length();
-        }
-    }
-
-
-    // --------------------------------------------------------------------
-    // ----------------- Compute dirty split values -----------------------
-    // --------------------------------------------------------------------
-
-    // Convert dirty intersections to dirty (= with possible duplicates) split values
-    std::vector<             double  > selfSplitValues_dirty;
-    std::vector< std::vector<double> > othersSplitValues_dirty(nEdges, std::vector<double>() );
-
-    // Self split values due to self-intersections + endpoints of sketched edge
-    // Note: detecting if the sketched edge is a loop is done at a later stage
-    for(auto intersection : selfIntersections)
-        selfSplitValues_dirty << intersection.s << intersection.t;
-    selfSplitValues_dirty << 0.0 << lSelf;
-
-    // Split values (both self and others) due to intersections with existing edges
-    for(int i=0; i<nEdges; ++i)
-    {
-        for(auto intersection : othersIntersections[i])
-        {
-            selfSplitValues_dirty << intersection.s;
-            othersSplitValues_dirty[i] << intersection.t;
-        }
-    }
-
-    // Sort dirty split values
-    std::sort(selfSplitValues_dirty.begin(),
-              selfSplitValues_dirty.end());
-
-    for(auto & otherSplitValues : othersSplitValues_dirty)
-    {
-        std::sort(otherSplitValues.begin(),
-                  otherSplitValues.end());
-    }
-
-#if MYDEBUG
-    {
-        /////////  Print split values so far  /////////
-        std::cout << "Raw split values:" << std::endl;
-        std::cout << "  Self split values = [ ";
-        for(double s : selfSplitValues_dirty)
-            std::cout << s << " ";
-        std::cout << "]" << std::endl;
-        std::cout << "  Others split values =" << std::endl;
-        for(auto splitValues : othersSplitValues_dirty)
-        {
-            std::cout << "    [ ";
-            for(double s : splitValues)
-                std::cout << s << " ";
-            std::cout << "]" << std::endl;
-        }
-        std::cout << std::endl;
-    }
-#endif
-
-
-    // --------------------------------------------------------------------
-    // ---------------- Remove duplicated split values --------------------
-    // --------------------------------------------------------------------
-
-    // Remove duplicates
-    std::vector<             double  > selfSplitValues;
-    std::vector< std::vector<double> > othersSplitValues(nEdges, std::vector<double>() );
-
-    // Convenient struct to avoid code duplication (almost same code for self/others intersections)
-    struct SplitValuesToClean
-    {
-        SplitValuesToClean(std::vector<double> & dirty, std::vector<double> & clean, double l, bool isSelf, bool isClosed) :
-            dirty(dirty), clean(clean), l(l), isSelf(isSelf), isClosed(isClosed) {}
-
-        std::vector<double> & dirty;
-        std::vector<double> & clean;
-        double l;
-        bool isSelf; // a flag to handle specific code only applying to self intersections
-        bool isClosed;
-    };
-
-    // Build vector of split values to clean
-    std::vector<SplitValuesToClean> toClean;
-    toClean.emplace_back(selfSplitValues_dirty, selfSplitValues, lSelf, true, false); // self split values
-
-    // For each of them, compute intersections with sketched edge
-    {
-        int i = 0;
-        foreach (KeyEdge * iedge, iedgesBefore)
-        {
-            // Avoid cleaning non-intersected existing edges
-            if(othersSplitValues_dirty[i].size() > 0)
-                toClean.emplace_back(othersSplitValues_dirty[i], othersSplitValues[i], lOthers[i], false, iedge->isClosed());
-            ++i;
-        }
-    }
-
-    // Clean all split values
-    // This is done by "clustering" together nearby split values (within specified tolerance)
-    // and replacing them by a single new split value, averaging the clustered old values
-    for(auto splitValues : toClean)
-    {
-        // Safety check: nothing to clean if no split values
-        if(splitValues.dirty.size() == 0)
-            continue;
-
-        // Variables to cluster split values together
-        int nMean = 0;  // current number of split values in current cluster
-        double sum = 0; // current sum    of split values in current cluster
-
-        // Get and add first split value
-        double firstSplitValue;
-        if(splitValues.isClosed)
-        {
-            //qDebug() << "isClosed";
-            firstSplitValue = splitValues.dirty.front();
-        }
-        else
-            firstSplitValue = 0;
-        splitValues.clean << firstSplitValue;
-
-        // Get last split value
-        double lastSplitValue;
-        if(splitValues.isClosed)
-            lastSplitValue = firstSplitValue + splitValues.l;
-        else
-            lastSplitValue = splitValues.l;
-
-        // Main loop over all split values
-        for(double s : splitValues.dirty)
-        {
-            // ignore all split values too close to start split value
-            if(s < firstSplitValue + tolerance)
-                continue;
-
-            // ignore all split values too close to end split value
-            if(s > lastSplitValue - tolerance)
-                break;
-
-            if(nMean == 0) // Add first split value to first cluster
-            {
-                nMean = 1;
-                sum = s;
-            }
-            else           // Check if next split value must be appended to the current cluster
-            {              // or inserted as the first split value of a new cluster
-                // the mean value that would be added if we stop contributing to this cluster
-                double mean = sum/nMean;
-
-                // test if adding the next value would infer a distance greater than tol or not
-                if(s > mean + tolerance)
-                {
-                    // If yes, then insert the mean
-                    splitValues.clean << mean;
-
-                    // And recurse: create a new cluster
-                    nMean = 1;
-                    sum = s;
-                }
-                else
-                {
-                    // Contribute to the mean
-                    nMean++;
-                    sum += s;
-                }
-            }
-        }
-        // No more split values to process, add the one from last cluster
-        if(nMean > 0)
-            splitValues.clean << sum/nMean;
-
-        // Add last split value
-        splitValues.clean << lastSplitValue;
-    }
-
-#if MYDEBUG
-    /////////  Print cleaned split values  /////////
-    std::cout << "Cleaning split values:" << std::endl;
-    std::cout << "  Self split values = [ ";
-    for(double s : selfSplitValues)
-        std::cout << s << " ";
-    std::cout << "] -- length = " << sketchedEdge_->length() << std::endl;
-    std::cout << "  Others split values =" << std::endl;
-    int i1 = 0;
-    for(auto splitValues : othersSplitValues)
-    {
-        std::cout << "    [ ";
-        for(double s : splitValues)
-            std::cout << s << " ";
-        std::cout << "] -- length = " << sketchedEdges[i1].length() << std::endl;
-        i1++;
-    }
-    std::cout << std::endl;
-#endif
-
-
-    // --------------------------------------------------------------------
-    // ---- Compute node positions corresponding to split values ----------
-    // --------------------------------------------------------------------
-
-    struct SplitNodes {
-
-        int size() const { return nSelf + nExisting; }
-        EdgeSample operator[] (int i)
-        {
-            if(i<nSelf)
-                return self[i];
-            else
-            {
-                i -= nSelf;
-                return existing[i];
-            }
-        }
-
-        int nSelf;
-        std::vector<EdgeSample,Eigen::aligned_allocator<EdgeSample> > self;
-
-        int nExisting;
-        std::vector<EdgeSample,Eigen::aligned_allocator<EdgeSample> > existing;
-        std::vector<KeyVertex *> existingNodes;
-
-    } splitNodes;
-
-    // Nodes created via selfIntersections
-    splitNodes.nSelf = static_cast<int>(selfSplitValues.size());
-    splitNodes.self.reserve(splitNodes.nSelf);
-    for(int i=0; i<splitNodes.nSelf; ++i)
-        splitNodes.self.push_back(sketchedEdge_->curve()(selfSplitValues[i]));
-
-    // Existing nodes, at the end of intersected other curves
-    { // create scope so that i stays local
-        int i=0;
-        foreach(KeyEdge * iedge, iedgesBefore) // TODO: generalize to Animated Nodes as well
-        {
-            if(othersSplitValues[i].size() > 0 && !iedge->isClosed())
-            {
-                // todo: be careful!! Potentially add several times the same node here!!!
-                splitNodes.existing << sketchedEdges[i].start();
-                splitNodes.existingNodes << iedge->startVertex();
-
-                splitNodes.existing << sketchedEdges[i].end();
-                splitNodes.existingNodes << iedge->endVertex();
-            }
-            i++;
-        }
-    }
-
-    // Existing nodes, close to end nodes.
-    {
-        EdgeSample startVertex = sketchedEdge_->curve().start();
-        EdgeSample endVertex = sketchedEdge_->curve().end();
-        foreach(KeyVertex * v, instantVertices(timeInteractivity_))
-        {
-            // todo: be careful!! Potentially add several times the same node here!!!
-            EdgeSample sv = startVertex;
-            sv.setX(v->pos()[0]);
-            sv.setY(v->pos()[1]);
-            if(sv.distanceTo(startVertex) < tolerance)
-            {
-                splitNodes.existing << sv;
-                splitNodes.existingNodes << v;
-            }
-            else
-            {
-                sv = endVertex;
-                sv.setX(v->pos()[0]);
-                sv.setY(v->pos()[1]);
-                if(sv.distanceTo(endVertex) < tolerance)
-                {
-                    splitNodes.existing << sv;
-                    splitNodes.existingNodes << v;
-                }
-            }
-        }
-    }
-
-    // Vertices created via intersection with other curves
-    // Warning: this step destroy some edges in iedgesBefore, but without removing
-    // them form
-    {
-        int i = 0;
-        foreach(KeyEdge * oldEdge, iedgesBefore)
-        {
-            if(othersSplitValues[i].size() > 2 || (oldEdge->isClosed() && othersSplitValues[i].size() > 1))
-                // avoid splitting if the cleaned split values are [0,l]
-                // unless it's a loop and split values can be [s,s+l]
-            {
-                // Split the edge
-                SplitInfo info = cutEdgeAtVertices_(oldEdge, othersSplitValues[i]);
-                foreach(KeyVertex * ivertex, info.newVertices)
-                {
-                    splitNodes.existing << EdgeSample(ivertex->pos()[0], ivertex->pos()[1]);
-                    splitNodes.existingNodes << ivertex;
-                }
-            }
-            i++;
-        }
-
-        // From this point, iedgesBefore must not be used, since some
-        // of its edges are deleted
-        iedgesBefore.clear();
-    }
-    splitNodes.nExisting = static_cast<int>(splitNodes.existing.size());
-
-
-#if MYDEBUG
-    /////////  Print position of BasivVertex  /////////
-    std::cout << "  Positions = [ ";
-    for(int i=0; i<splitNodes.size(); ++i)
-        std::cout << "(" << splitNodes[i].x() << "," << splitNodes[i].y() << ") ";
-    std::cout << "]" << std::endl;
-    std::cout << std::endl;
-#endif
-
-
-    // --------------------------------------------------------------------
-    // ------------------- Create 2D clustering graph ---------------------
-    // --------------------------------------------------------------------
-
-    // Create graph where nodes are linked by an edge iff their 2D euclidean distance is < tol
-    // The graph is represented as an adjacency list
-    // Initialize adj list
-    int nSplit = splitNodes.size();
-    std::vector< std::vector<int> > neighbours(nSplit, std::vector<int>());
-
-    // feed adj list: here, room for optimization from n^2 to n log(n) by sorting and swipe line algos
-    // in practice, n is rarely gonna exceeding 10, so... not a serious concern for now
-    for(int i=0; i<nSplit; ++i)
-        for(int j=i+1; j<nSplit; ++j)
-        {
-            double d = splitNodes[i].distanceTo(splitNodes[j]);
-            if(d<tolerance)
-            {
-                neighbours[i].push_back(j);
-                neighbours[j].push_back(i);
-            }
-        }
-
-    // Aux structure associated with each cluster.
-    // It creates a new Node() if no existing node exists in the cluster.
-    // Then, for each i in the clusters, return the corresponding Node *.
-    //
-    // Note: the comment above is obsolete, now the cluster itself has no
-    //       logic, just store the data, and what is written above is not
-    //       done by the cluster but by the algorithm just after
-    //
-    struct Cluster
-    {
-        // members
-        std::vector<int> indices;
-
-        // member methods
-        int size() const { return (int)indices.size(); }
-        Cluster & operator<<(int i) { indices << i; return *this; }
-    };
-
-    // Compute connected components: those are the clusters
-    std::vector< Cluster > clusters;
-    std::vector<bool> marked(nSplit, false);
-    for(int startNode=0; startNode<nSplit; ++startNode)
-    {
-        if(!marked[startNode])
-        {
-            // create a new cluster
-            clusters.emplace_back();
-            Cluster & cluster = clusters.back();
-
-            // insert the first node in the cluster
-            cluster << startNode;
-            marked[startNode] = true;
-
-            // fill the connected components
-            std::queue<int> q;
-            q.push(startNode);
-            while(!q.empty())
-            {
-                int node = q.front();
-                q.pop();
-                const std::size_t nNeighbours = neighbours[node].size();
-                for(std::size_t i = 0; i < nNeighbours; ++i)
-                {
-                    int neighbour = neighbours[node][i];
-                    if(!marked[neighbour])
-                    {
-                        marked[neighbour] = true;
-                        q.push(neighbour);
-                        cluster << neighbour;
-                    }
-                }
-            }
-        }
-    }
-    int nClusters= clusters.size();
-
-#if MYDEBUG
-    /////////  Print clusters  /////////
-    std::cout << "Clustering:" << std::endl;
-    std::cout << "  Self nodes indices = [ 0 .. " << splitNodes.nSelf-1 << " ]" << std::endl;
-    std::cout << "  Existing nodes indices = [ ";
-    if(nSplit-1 < splitNodes.nSelf)
-        std::cout << "]" << std::endl;
-    else if(nSplit-1 == splitNodes.nSelf)
-        std::cout << splitNodes.nSelf << " ]" << std::endl;
-    else
-        std::cout << splitNodes.nSelf << " .. " << nSplit-1 << " ]" << std::endl;
-    std::cout << "  Clusters: ";
-    for(int k=0; k<nClusters; ++k)
-    {
-        std::cout << "[ ";
-        int nConnected = clusters[k].size();
-        for(int i=0; i<nConnected; ++i)
-            std::cout << clusters[k].indices[i] << " ";
-        std::cout << "] ";
-    }
-    std::cout << std::endl;
-#endif
-
-
-    // --------------------------------------------------------------------
-    // ----------- Detect when the sketched edge must be a loop -----------
-    // --------------------------------------------------------------------
-
-    // TODO: Change the following code. Instead, we should detect when the first and last vertex of the sketched edge must be destroyed
-
-    // I suppose no cluster has no self node in it. The reason is that if
-    // an existing node is taken into account in this algo, then it has split
-    // the sketched curve too, or will be use as start/end vertex.
-    //
-    // Edit: I think the above is wrong, since end points of intersected edges
-    //       are automatically added as nodes
-    //
-    // Hence, all clusters have at least one self node. In the case of a loop,
-    // this mean there is only one cluster, made of two self nodes.
-    bool isClosed = false;
-    int nSelf = splitNodes.nSelf;
-    if(nSelf == 2     &&
-            nClusters == 1 &&
-            clusters[0].size() == 2 )
-    {
-        isClosed = true;
-    }
-
-
-    // --------------------------------------------------------------------
-    // ---------------------- Process the clusters ------------------------
-    // --------------------------------------------------------------------
-
-    // From the indices in the cluster, compute:
-    //   - how many of them are existing nodes
-    //   - if zero: compute the mean, create new node
-    //   - if one: basically do nothing
-    //   - if more than one: for each index, compute closest existing node in cluster
-
-    // Note: nSelfSplitValues = nSelfSplitNodes, by definition of nSelfSplitNodes
-    // The actual nodes corresponding to the
-    // self interections, already existing or newly created
-    std::vector<KeyVertex*> selfNodes;
-    selfNodes.resize(nSelf);
-
-    if(isClosed)
-    {
-        // nothing to do
-    }
-    else
-    {
-        for(int i=0; i<nClusters; ++i)
-        {
-            Cluster & cluster = clusters[i];
-
-            // How many existing nodes are in this cluster?
-            // Who are they?
-            //
-            // todo? : what if no self nodes are in this cluster? Is this even possible? likely?
-            //
-            std::vector<KeyVertex *> existing;
-            for(int i : cluster.indices)
-                if(i>=nSelf)
-                    existing << splitNodes.existingNodes[i-nSelf];
-
-            // If none of them, compute the mean vertex
-            // and create a new node
-            if(existing.size() == 0)
-            {
-                // Create the new node
-                KeyVertex * newNode = newKeyVertex(timeInteractivity_);
-
-                // compute node position as mean of all self intersections
-                Eigen::Vector2d mean(0,0);
-                int n = cluster.size(); // we know size() > 0
-                for(int i=0; i<n; ++i)
-                {
-                    int idx = cluster.indices[i];
-
-                    // contributes to mean
-                    mean += Eigen::Vector2d(splitNodes[idx].x(), splitNodes[idx].y());
-
-                    // set the new node to be my node
-                    selfNodes[idx] = newNode;
-                }
-                // Set node position
-                mean /= (double) n;
-                newNode->setPos(mean);
-            }
-            else if (existing.size() == 1)
-            {
-                for(int i : cluster.indices)
-                    if(i<nSelf)
-                        selfNodes[i] = existing.front();
-            }
-            else
-            {
-                // for now, just use first one instead of the closest one. Todo: improve this
-                for(int i : cluster.indices)
-                    if(i<nSelf)
-                        selfNodes[i] = existing.front();
-
-            }
-        }
-    }
-
-    // --------------------------------------------------------------------
-    // -------------------- Split the drawn curve -------------------------
-    // --------------------------------------------------------------------
-
-    std::vector<SketchedEdge,Eigen::aligned_allocator<SketchedEdge> > curves;
-    if(!isClosed)
-        curves = sketchedEdge_->curve().split(selfSplitValues);
-
-    // Create topology and retarget drawn curve
-    if(isClosed)
-    {
-        // retarget curve
-        EdgeSample vStart = sketchedEdge_->curve().start();
-        EdgeSample vEnd = sketchedEdge_->curve().end();
-        double meanX = 0.5 * (vStart.x() + vEnd.x());
-        double meanY = 0.5 * (vStart.y() + vEnd.y());
-        vStart.setX(meanX);
-        vStart.setY(meanY);
-        vEnd.setX(meanX);
-        vEnd.setY(meanY);
-        sketchedEdge_->curve().setEndPoints(vStart, vEnd);
-
-        // Create geometry out of it
-        EdgeGeometry * geometry = new LinearSpline(sketchedEdge_->curve(), true);
-        KeyEdge * iedge = newKeyEdge(timeInteractivity_, geometry);
-
-        // if planar map mode, the loop can "cut" a face
-        if(global()->planarMapMode())
-        {
-            if(hoveredFaceOnMousePress_)
-            {
-                // Cut face with loop
-                KeyEdgeSet loopCycle;
-                loopCycle << iedge;
-                Cycle newCycle(loopCycle);
-                hoveredFaceOnMousePress_->addCycle(newCycle);
-                KeyFace * iFace = newKeyFace(loopCycle);
-                iFace->setColor(hoveredFaceOnMousePress_->color());
-                InbetweenFaceSet sfacesbefore = hoveredFaceOnMousePress_->temporalStarBefore();
-                foreach(InbetweenFace * sface, sfacesbefore)
-                    sface->addAfterFace(iFace);
-                InbetweenFaceSet sfacesafter = hoveredFaceOnMousePress_->temporalStarAfter();
-                foreach(InbetweenFace * sface, sfacesafter)
-                    sface->addBeforeFace(iFace);
-            }
-        }
-    }
-    else
-    {
-        // if planar map mode, the first and last vertices can "cut" faces
-        // by being added as Steiner cycles
-        if(global()->planarMapMode() && nSelf>0)
-        {
-            KeyVertex * firstVertex = selfNodes[0];
-            KeyVertex * lastVertex = selfNodes[nSelf-1];
-
-            if(hoveredFaceOnMousePress_ &&
-                    !(hoveredFaceOnMousePress_->spatialBoundary().contains(firstVertex)))
-            {
-                // Cut face with Steiner verte
-                Cycle newCycle(firstVertex);
-                hoveredFaceOnMousePress_->addCycle(newCycle);
-            }
-            if(hoveredFaceOnMouseRelease_ && (firstVertex != lastVertex) &&
-                    !(hoveredFaceOnMouseRelease_->spatialBoundary().contains(lastVertex)))
-            {
-                // Cut face with Steiner vertex
-                Cycle newCycle(lastVertex);
-                hoveredFaceOnMouseRelease_->addCycle(newCycle);
-            }
-        }
-
-
-        for(int i=0; i<nSelf-1; ++i)
-        {
-            // end nodes
-            KeyVertex * startNode = selfNodes[i];
-            KeyVertex * endNode = selfNodes[i+1];
-
-            // retarget curve
-            EdgeSample vStart = curves[i].start();
-            vStart.setX(startNode->pos()[0]);
-            vStart.setY(startNode->pos()[1]);
-            EdgeSample vEnd = curves[i].end();
-            vEnd.setX(endNode->pos()[0]);
-            vEnd.setY(endNode->pos()[1]);
-            curves[i].setEndPoints(vStart, vEnd);
-
-            // Create geometry out of it
-            LinearSpline * geometry = new LinearSpline(curves[i]);
-            KeyEdge * iedge = 0;
-            if(geometry->length() > tolerance) {
-                geometry->setStrokeWidth(sketchedEdge_->strokeWidth());
-                geometry->setZoomLevel(sketchedEdge_->zoomLevel());
-                iedge = newKeyEdge(timeInteractivity_, startNode, endNode, geometry);
-            }
-
-            // if planar map mode, cut a potential face underneath
-            if(iedge && global()->planarMapMode())
-            {
-                // find a face to cut
-                KeyFaceSet startFaces = startNode->spatialStar();
-                KeyFaceSet endFaces = endNode->spatialStar();
-                KeyFaceSet faces = startFaces;
-                faces.intersect(endFaces);
-                if(useFaceToConsiderForCutting)
-                    faces.intersect(facesToConsiderForCutting_);
-
-                if(!faces.isEmpty())
-                {
-                    // For now, just use the first face
-                    KeyFace * face = *faces.begin();
-
-                    // Cut the face by the new edge
-                    CutFaceFeedback feedback;
-                    cutFace_(face,iedge, &feedback);
-                    if(useFaceToConsiderForCutting)
-                    {
-                        foreach(KeyFace * face, feedback.deletedFaces)
-                            facesToConsiderForCutting_.remove(face);
-                        foreach(KeyFace * face, feedback.newFaces)
-                            facesToConsiderForCutting_.insert(face);
-                    }
-                }
-            }
-        }
-    }
+    auto * l = newKeyVertex(timeInteractivity_, (*sketchedEdge_)[0]);
+    auto * r =
+        newKeyVertex(timeInteractivity_, (*sketchedEdge_)[sketchedEdge_->size() - 1]);
+    return newKeyEdge(timeInteractivity_, l, r, sketchedEdge_->clone(), 0.0);
 }
 
 // --------------------- Sculpting ------------------------

@@ -137,6 +137,13 @@ public:
     void addObserver(CellObserver * observer);
     void removeObserver(CellObserver * observer);
 
+    void setDeletionTime(double t) {
+        deletionTime_ = t;
+    }
+    double deletionTime() const {
+        return deletionTime_;
+    }
+
 protected:
     // Protected constructor, so only VAC and derived classes can call it.
     // It creates a cell with VAC `vac`. `vac` must be non null.
@@ -160,6 +167,9 @@ protected:
 
     // Get cell from id (syntactic sugar for vac()->getCell(id))
     Cell * getCell(int id);
+
+    // Time at which this stroke was deleted.
+    double deletionTime_ = 0.0;
 
 private:
     // Embedding in VAC

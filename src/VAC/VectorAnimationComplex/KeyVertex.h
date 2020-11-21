@@ -57,7 +57,6 @@ public:
 
     EIGEN_MAKE_ALIGNED_OPERATOR_NEW
 
-
 private:
         friend class VAC;
     ~KeyVertex();
@@ -77,7 +76,6 @@ private:
     Eigen::Vector2d posBack_;
 
     void initColor();
-
 
 // --------- Cloning, Assigning, Copying, Serializing ----------
 
@@ -101,6 +99,7 @@ protected:
         friend Cell * Cell::read1stPass(VAC * vac, QTextStream & in);
         static KeyVertex * create(VAC * g, QTextStream & in)
             {return new KeyVertex(g, in);} };
+
 };
 
 }

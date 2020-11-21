@@ -362,8 +362,8 @@ private:
     CellSet cellsInRectangleOfSelection_;
 
     // Drawing a new stroke
-    void insertSketchedEdgeInVAC();
-    void insertSketchedEdgeInVAC(double tolerance, bool useFaceToConsiderForCutting = true);
+    KeyEdge * insertSketchedEdgeInVAC();
+    KeyEdge * insertSketchedEdgeInVAC(double tolerance, bool useFaceToConsiderForCutting = true);
     void drawSketchedEdge(Time time, ViewSettings & viewSettings) const;
     void drawTopologySketchedEdge(Time time, ViewSettings & viewSettings) const;
     LinearSpline * sketchedEdge_;

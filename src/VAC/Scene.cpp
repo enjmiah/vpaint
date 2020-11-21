@@ -21,6 +21,9 @@
 
 #include "VectorAnimationComplex/VAC.h"
 #include "VectorAnimationComplex/InbetweenFace.h"
+#include "VectorAnimationComplex/EdgeGeometry.h"
+#include "VectorAnimationComplex/KeyEdge.h"
+#include "VectorAnimationComplex/KeyVertex.h"
 #include "Background/Background.h"
 
 #include <QtDebug>
@@ -36,6 +39,10 @@
 #include <QToolBar>
 
 #include "Layer.h"
+
+#include <chrono>
+
+using VectorAnimationComplex::KeyEdge;
 
 Scene::Scene() :
     activeLayerIndex_(-1),
@@ -686,6 +693,7 @@ void Scene::addLayer_(Layer * layer, bool silent)
 
     connect(layer, SIGNAL(changed()), this, SIGNAL(changed()));
     connect(layer, SIGNAL(checkpoint()), this, SIGNAL(checkpoint()));
+    connect(layer, SIGNAL(checkpoint(KeyEdge*)), this, SIGNAL(checkpoint(KeyEdge*)));
     connect(layer, SIGNAL(needUpdatePicking()), this, SIGNAL(needUpdatePicking()));
     connect(layer, SIGNAL(selectionChanged()), this, SIGNAL(selectionChanged()));
     connect(layer, SIGNAL(layerAttributesChanged()), this, SIGNAL(layerAttributesChanged()));
@@ -724,29 +732,23 @@ void Scene::test()
 void Scene::smartDelete()
 {
     Layer * layer = activeLayer();
-    if(layer)
-    {
-        Layer * deleteLayer = nullptr;
-        for (auto * l : layers_) {
-            if (l->name() == "__deleted__") {
-                deleteLayer = l;
-                break;
+    if (layer) {
+        const auto now = std::chrono::duration<double>(
+                             std::chrono::system_clock::now().time_since_epoch())
+                             .count();
+        for (auto * cell : layer->vac()->selectedCells()) {
+            auto * ke = cell->toKeyEdge();
+            if (ke) {
+                ke->setDeletionTime(now);
+                ke->startVertex()->setDeletionTime(now);
+                ke->endVertex()->setDeletionTime(now);
+                ke->setColor(QColor(30, 255, 0, 30));
             }
         }
-        // Create __deleted__ layer if it doesn't already exist
-        if (!deleteLayer) {
-            const int activeLayerIdx = layers_.indexOf(layer);
-            deleteLayer = new Layer("__deleted__");
-            addLayer_(deleteLayer, true);
-            deleteLayer->setVisible(false);
-            // setActiveLayer(activeLayerIdx);
-            activeLayerIndex_ = activeLayerIdx;
-        }
-        // Move selected objects to __deleted__ layer
-        VectorAnimationComplex::VAC * clip = nullptr;
-        layer->vac()->cut(clip, true);
-        deleteLayer->vac()->paste(clip);
-        delete clip;
+        deselectAll();
+        emit needUpdatePicking();
+        emit changed();
+        emit checkpoint();
     }
 }
 

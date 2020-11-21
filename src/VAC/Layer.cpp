@@ -21,6 +21,8 @@
 #include "XmlStreamReader.h"
 #include "XmlStreamWriter.h"
 
+using VectorAnimationComplex::KeyEdge;
+
 Layer::Layer(NoInit_)
 {
 
@@ -42,6 +44,7 @@ void Layer::init_(
 
     connect(vac_, SIGNAL(changed()), this, SIGNAL(changed()));
     connect(vac_, SIGNAL(checkpoint()), this, SIGNAL(checkpoint()));
+    connect(vac_, SIGNAL(checkpoint(KeyEdge*)), this, SIGNAL(checkpoint(KeyEdge*)));
     connect(vac_, SIGNAL(needUpdatePicking()), this, SIGNAL(needUpdatePicking()));
     connect(vac_, SIGNAL(selectionChanged()), this, SIGNAL(selectionChanged()));
 }

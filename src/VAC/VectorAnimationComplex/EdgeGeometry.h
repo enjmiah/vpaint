@@ -123,6 +123,11 @@ public:
     };
     virtual ClosestVertexInfo closestPoint(double x, double y);
 
+    double strokeWidth() const { return strokeWidth_; }
+    double zoomLevel() const { return zoomLevel_; }
+    void setStrokeWidth(double width) { strokeWidth_ = width; }
+    void setZoomLevel(double zoom) { zoomLevel_ = zoom; }
+
     EIGEN_MAKE_ALIGNED_OPERATOR_NEW
 
 protected:
@@ -138,10 +143,14 @@ protected:
     virtual void makeLoop_() {}
     bool isClosed_;
 
+    // Zoom level when this stroke was drawn.
+    double zoomLevel_ = -1.0;
+
+    // Stroke width setting when this stroke was drawn.
+    double strokeWidth_ = -1.0;
 
 private:
     double ds_;
-
 };
 
 class LinearSpline: public EdgeGeometry
@@ -216,7 +225,8 @@ public:
 
     LinearSpline(QTextStream & in);
     //LinearSpline(XmlStreamReader & xml);
-    LinearSpline(const QStringRef & str, const QStringRef & subtype, double width, double zoom); // str = curve data from XML, without the type
+    LinearSpline(const QStringRef & str, const QStringRef & subtype, double width,
+                 double zoom); // str = curve data from XML, without the type
     QString stringType() const {return "LinearSpline";}
 
     SculptCurve::Curve<EdgeSample> & curve();
@@ -231,11 +241,6 @@ public:
     void continueSketch(const EdgeSample & resample);
     void endSketch();
 
-    double strokeWidth() const { return strokeWidth_; }
-    double zoomLevel() const { return zoomLevel_; }
-    void setStrokeWidth(double width) { strokeWidth_ = width; }
-    void setZoomLevel(double zoom) { zoomLevel_ = zoom; }
-
 protected:
     void save_(QTextStream & out);
     void write(XmlStreamWriter & xml) const;
@@ -247,12 +252,6 @@ private:
     //QList<Eigen::Vector2d> vertices_;
 
     SculptCurve::Curve<EdgeSample> curve_;
-
-    // Zoom level when this stroke was drawn.
-    double zoomLevel_ = -1.0;
-
-    // Stroke width setting when this stroke was drawn.
-    double strokeWidth_ = -1.0;
 
     // Store initial curve for affine tranform
     SculptCurve::Curve<EdgeSample> curveBeforeTransform_;

@@ -45,6 +45,7 @@ class View3DSettingsWidget;
 
 namespace VectorAnimationComplex
 {
+class KeyEdge;
 class VAC;
 class InbetweenFace;
 }
@@ -102,6 +103,7 @@ private slots:
 
     // ---- Edit ----
     void addToUndoStack();
+    void addToUndoStack(VectorAnimationComplex::KeyEdge*);
     void undo();
     void cut();
     void copy();

@@ -178,6 +178,7 @@ MainWindow::MainWindow() :
     // handle undo/redo
     resetUndoStack_();
     connect(scene_, SIGNAL(checkpoint()), this, SLOT(addToUndoStack()));
+    connect(scene_, SIGNAL(checkpoint(KeyEdge*)), this, SLOT(addToUndoStack(KeyEdge*)));
 
     // Window icon
     QGuiApplication::setWindowIcon(QIcon(":/images/icon-256.png"));
@@ -370,6 +371,23 @@ void MainWindow::addToUndoStack()
 
     // Update window title
     updateWindowTitle_();
+}
+
+void MainWindow::addToUndoStack(KeyEdge* e)
+{
+    undoIndex_++;
+    for(int j=undoStack_.size()-1; j>=undoIndex_; j--)
+    {
+        delete undoStack_[j].second;
+        undoStack_.removeLast();
+    }
+    undoStack_ << qMakePair(global()->documentDir(), new Scene());
+    undoStack_[undoIndex_].second->copyFrom(scene_);
+
+    // Update window title
+    updateWindowTitle_();
+
+    std::cout << "Special undo\n";
 }
 
 void MainWindow::clearUndoStack_()
